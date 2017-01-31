@@ -1,0 +1,13 @@
+%% Calculate Ix, Iy, Iz (Derivative of Trilinear Weights)
+% Calculates the derivative of the trilinear weights with respect to x,y,z
+function [Ix, Iy, Iz] = get_I(xv, ix_x, ix_y, ix_z,...
+    x_grid, y_grid, z_grid, Nx, Ny, Nz, Nt)
+
+    Ix = trilinear_weights_I_x(xv(ix_x), xv(ix_y), xv(ix_z), ...
+            x_grid, y_grid, z_grid, Nx, Ny, Nz, Nt);
+    Iy = trilinear_weights_I_y(xv(ix_x), xv(ix_y), xv(ix_z), ...
+            x_grid, y_grid, z_grid, Nx, Ny, Nz, Nt);
+    Iz = trilinear_weights_I_z(xv(ix_x), xv(ix_y), xv(ix_z), ...
+            x_grid, y_grid, z_grid, Nx, Ny, Nz, Nt);
+
+end 
