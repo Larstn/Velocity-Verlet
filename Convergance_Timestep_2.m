@@ -186,25 +186,9 @@ for i = 1:length(Nt_vec)
     dGdEx_diff(:,:,:,i) = (dGdEx0(:,:,1)' - dGdEx_meas')./dGdEx0(:,:,1)';
     indicies = dGdEx_diff(:,:,:,i);
     indicies(isnan(indicies)) = 0;
-    %indicies;
+    
     dGdEx_diff_fin(i) = sum(sum(sqrt(indicies.^2)));
-%     Nx          = 11;
-%     Ny          = 11;
-%     Nz          = 2;
-% 
-% 
-% 
-%     V           = repmat(peaks(Nx), [1 1 2]); assert(Nx == Ny);
-%     V(:,:,2) = V(:,:,1);
-%     E_x         = -centeredDiff(V, 1);
-%     E_y         = -centeredDiff(V, 2);
-%     E_z         = -centeredDiff(V, 3);
-%     T_span      = [0 1];
-% 
-%     dGdEx_all(:,:,:,1) = dGdEx0;
 
-    %sum(sum(abs(dGdEx0(:,:,1)' - dGdEx_meas')))
-    %sum(abs(dGdEx0(:,:,1)' - dGdEx_meas).^2)
     
 end
 
