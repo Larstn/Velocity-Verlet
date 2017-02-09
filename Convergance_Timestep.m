@@ -1,5 +1,5 @@
 %% Input parameters for this test case
-Nt_vec = [2 5 10 20 40 80 160 250 320];
+Nt_vec = [2 5 10 20 40 80 160 250 320 600 1200 2500 5000 1000 5000 10000];
 
 Nx          = 21;
 Ny          = 21;
@@ -92,24 +92,24 @@ for i = 1:length(Nt_vec)
     dGdEx_meas = 0*E_x(:,:,1);
     
     
-    for xx = 8:16
-        for yy = 8:16
-            fprintf('%i, %i\n', xx, yy);
-
-            Ex2 = E_x;
-            Ex2(xx,yy,1) = Ex2(xx,yy,1) + delta;
-            [xv2, accel2] = velocityVerlet3D(ts, xv0, ...
-                accelFunc(Ex2, E_y, E_z));
-            G2 = hitObjective3D(xv2, obj_weights);
-
-
-            dGdEx_meas(xx,yy) = (G2-G)/delta;
-
-
-
-
-        end
-    end
+%     for xx = 8:16
+%         for yy = 8:16
+%             fprintf('%i, %i\n', xx, yy);
+% 
+%             Ex2 = E_x;
+%             Ex2(xx,yy,1) = Ex2(xx,yy,1) + delta;
+%             [xv2, accel2] = velocityVerlet3D(ts, xv0, ...
+%                 accelFunc(Ex2, E_y, E_z));
+%             G2 = hitObjective3D(xv2, obj_weights);
+% 
+% 
+%             dGdEx_meas(xx,yy) = (G2-G)/delta;
+% 
+% 
+% 
+% 
+%         end
+%     end
     
     figure(10+i)
     subplot(3,15,[3:5 18:20 33:35] +1)
@@ -221,7 +221,7 @@ end
 figure(6)
 loglog(Nt_vec, x_plot)
 xlabel('Nt_vec')
-ylabel('x_end_final -  x_end_i')
+ylabel('x_{end_final} -  x_{end_i}')
 
 
 fin = zeros(1,length(Nt_vec));

@@ -1,8 +1,8 @@
 %% Input parameters for this test case
-Nt_vec = [2];
+Nt_vec = [100 120];
 
-Nx          = 11;
-Ny          = 11;
+Nx          = 21;
+Ny          = 21;
 Nz          = 2;
 
 t_end = 1;
@@ -18,8 +18,7 @@ xv_matrix = zeros(length(Nt_vec),6*Nt_vec(end));
 dGdEx_diff = zeros(Nx,Ny,1,length(Nt_vec));
 
 dGdEx_diff_fin = zeros(1,length(Nt_vec));
-figure(200)
-clf
+
 
 for i = 1:length(Nt_vec)
 
@@ -56,13 +55,13 @@ for i = 1:length(Nt_vec)
     E_x         = -centeredDiff(V, 1);
     E_y         = -centeredDiff(V, 2);
     E_z         = -centeredDiff(V, 3);
-%     figure(1)
-%     subplot(3,1,1)
-%     imagesc(E_x(:,:,1))
-%     subplot(3,1,2)
-%     imagesc(E_y(:,:,1))
-%     subplot(3,1,3)
-%     imagesc(E_z(:,:,1))
+    figure(1)
+    subplot(3,1,1)
+    imagesc(E_x(:,:,1))
+    subplot(3,1,2)
+    imagesc(E_y(:,:,1))
+    subplot(3,1,3)
+    imagesc(E_z(:,:,1))
 
     %%
     % Setting natural constants
@@ -78,7 +77,35 @@ for i = 1:length(Nt_vec)
     
     %[ix_x, ix_y, ix_z, iv_x, iv_y, iv_z, ia_x, ia_y, ia_z] = get_Index3D(Nt);
     
+    [xv, accel] = velocityVerlet3D(ts, xv0, accelFunc(E_x, E_y, E_z));
     
+    [G, dGdxv] = hitObjective3Dtarget(xv, obj_weights, x_p, y_p, z_p, ...
+        vx_p, vy_p, vz_p);
+    
+    [systemMatrix, initMatrix, accelMatrix] = velocityVerletMatrices3D(ts);
+    
+    ax1 = accel(:,1);
+    ay1 = accel(:,2);
+    az1 = accel(:,3);
+    
+    delta = 1e-9;
+    dGdEx_meas = 0*E_x(:,:,1);
+    
+    
+    for xx = 8:15
+        for yy = 8:15
+            fprintf('%i, %i\n', xx, yy);
+
+            Ex2 = E_x;
+            Ex2(xx,yy,1) = Ex2(xx,yy,1) + delta;
+            [xv2, accel2] = velocityVerlet3D(ts, xv0, ...
+                accelFunc(Ex2, E_y, E_z));
+            G2 = hitObjective3D(xv2, obj_weights);
+
+            dGdEx_meas(xx,yy) = (G2-G)/delta;
+
+        end
+    end
     
     figure(10+i)
     subplot(3,15,[3:5 18:20 33:35] +1)
@@ -95,16 +122,14 @@ for i = 1:length(Nt_vec)
                 xv, x_p, y_p, z_p, vx_p, vy_p, vz_p, obj_weights);
 
     [dGdEx0, dGdEy0, dGdEz0, G0, xv, DG, xv_dual, Nt] = ...
-        VV_get_dual_E_final_auto_conv(n_charges, n_masses, E_x, E_y, E_z,...
+        VV_get_dual_E_final_auto_conv2(n_charges, n_masses, E_x, E_y, E_z,...
     x_grid, y_grid, z_grid, xv0, nParticle, hit_objective, ts);
 
     [ix_x, ix_y, ix_z, ~] =...
         get_Index3D(Nt);
-    
-    ts = linspace(t_start, t_end, Nt);
-    
-
      
+    ts = linspace(t_start, t_end, Nt);
+  
    % figure(10+i)
     subplot(3,15,1:2)
     plot(ts, xv(ix_x))
@@ -138,7 +163,7 @@ for i = 1:length(Nt_vec)
     dGdEx_all(:,:,:,i,2) = dGdEx0;
     
     
-    figure(200)
+    figure(2)
     hold all 
     subplot(3,1,1)
     hold all
@@ -150,46 +175,6 @@ for i = 1:length(Nt_vec)
     hold all
     plot(ts,xv(ix_z))
     
-        
-    [xv, accel] = velocityVerlet3D(ts, xv0, accelFunc(E_x, E_y, E_z));
-    
-    [G, dGdxv] = hitObjective3Dtarget(xv, obj_weights, x_p, y_p, z_p, ...
-        vx_p, vy_p, vz_p);
-    
-    [systemMatrix, initMatrix, accelMatrix] = velocityVerletMatrices3D(ts);
-    
-    ax1 = accel(:,1);
-    ay1 = accel(:,2);
-    az1 = accel(:,3);
-    
-    delta = 1e-9;
-    dGdEx_meas = 0*E_x(:,:,1);
-    
-    
-    for xx = 4:9
-        for yy = 4:9
-            fprintf('%i, %i\n', xx, yy);
-
-            Ex2 = E_x;
-            Ex2(xx,yy,1) = Ex2(xx,yy,1) + delta;
-            [xv2, accel2] = velocityVerlet3D(ts, xv0, ...
-                accelFunc(Ex2, E_y, E_z));
-            G2 = hitObjective3D(xv2, obj_weights);
-
-
-            dGdEx_meas(xx,yy) = (G2-G)/delta;
-
-
-
-
-        end
-    end
-    
-    
-    
-    
-    
-    
     figure(20)
     subplot(length(Nt_vec),1,i)
     imagesc(x_grid, y_grid, (dGdEx0(:,:,1)' - dGdEx_meas')./dGdEx0(:,:,1)');
@@ -200,10 +185,6 @@ for i = 1:length(Nt_vec)
     indicies(isnan(indicies)) = 0;
     %indicies
     dGdEx_diff_fin(i) = sum(sum(indicies));
-    
-    
-    
-    
 %     Nx          = 11;
 %     Ny          = 11;
 %     Nz          = 2;

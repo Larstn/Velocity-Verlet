@@ -2,12 +2,12 @@
 % Calculates the derivative of the objective function with respect to the
 % electric field components at each grid with the dual function
 function [dGdEx_sum, dGdEy_sum, dGdEz_sum, G_sum, xv_all, DG, xv_dual, Nt] ...
-    = VV_get_dual_E_final_auto_conv(n_charges, n_masses, E_x, E_y, E_z, ...
+    = VV_get_dual_E_final_auto_conv2(n_charges, n_masses, E_x, E_y, E_z, ...
     x_grid, y_grid, z_grid, xv0, nParticle, objective_function, ts)
 
 
-    elementary_charge   = 1;%1.60217662e-19;
-    electron_mass       = 1;%9.1093856e-31;
+    elementary_charge   = 1.60217662e-19;
+    electron_mass       = 9.1093856e-31;
 
     Nx = size(E_x, 1);
     Ny = size(E_x, 2); 
@@ -25,6 +25,10 @@ function [dGdEx_sum, dGdEy_sum, dGdEz_sum, G_sum, xv_all, DG, xv_dual, Nt] ...
     [ix_x, ix_y, ix_z, ~] =...
         get_Index3D(Nt);
 
+    
+    d_x_diff = x_grid(2) - x_grid(1);
+    d_y_diff = y_grid(2) - y_grid(1);
+    d_z_diff = z_grid(2) - z_grid(1);
 
     G_sum = 0;
     dGdEx_sum = 0*E_x;
@@ -49,7 +53,9 @@ function [dGdEx_sum, dGdEy_sum, dGdEz_sum, G_sum, xv_all, DG, xv_dual, Nt] ...
 
             [xv, ~] = velocityVerlet3D(...
                 ts, xv_start, accelFunc(E_x, E_y, E_z));
-            
+%                 if cnt == 1
+%                     break
+%                 end
                if cnt > 0 
                 
                 diff_x = ...
@@ -64,7 +70,13 @@ function [dGdEx_sum, dGdEy_sum, dGdEz_sum, G_sum, xv_all, DG, xv_dual, Nt] ...
                 disp(diff_x)
                 disp(diff_y)
                 disp(diff_z)
-                if (diff_x < 0.001) && (diff_y < 0.001) && (diff_z < 0.001)
+                
+                delta_x = xv(ix_x(1:(end-1))) - xv(ix_x(2:end));
+                delta_y = xv(ix_y(1:(end-1))) - xv(ix_y(2:end)); 
+                delta_z = xv(ix_z(1:(end-1))) - xv(ix_z(2:end)); 
+
+                
+                if (diff_x < 0.0001) && (diff_y < 0.0001) && (diff_z < 0.0001)
                     break
                 else
                     Nt = 2*Nt;
@@ -77,7 +89,7 @@ function [dGdEx_sum, dGdEy_sum, dGdEz_sum, G_sum, xv_all, DG, xv_dual, Nt] ...
                end
                    
         end
-        xv
+        %xv
         [iix, iiy, iiz, w000, w001, w010, w011, w100, w101, w110, w111] ...
             = trilinear_weights(xv(ix_x), xv(ix_y), xv(ix_z), ...
                 x_grid, y_grid, z_grid);
