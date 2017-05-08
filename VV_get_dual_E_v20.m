@@ -2,12 +2,17 @@
 % Calculates the derivative of the objective function with respect to the
 % electric field components at each grid with the dual function
 function [dGdEx_sum, dGdEy_sum, dGdEz_sum, G_sum, xv_all, DG, xv_dual, Nt] ...
-    = VV_get_dual_E_v20(n_charges, n_masses, E_x, E_y, E_z, ...
+    = VV_get_dual_E_v20(n_charges, n_masses, VComsol, ...
     x_grid, y_grid, z_grid, xv0, nParticle, objective_function, ts)
 
 
+
+    E_x = VComsol(:,:,:,1);
+    E_y = VComsol(:,:,:,2);
+    E_z = VComsol(:,:,:,3);
+
     elementary_charge   = 1.60217662e-19;
-    electron_mass       = 9.1093856e-31;
+    electron_mass       = 1.6605e-27;
 
     Nx = size(E_x, 1);
     Ny = size(E_x, 2); 
@@ -30,12 +35,12 @@ function [dGdEx_sum, dGdEy_sum, dGdEz_sum, G_sum, xv_all, DG, xv_dual, Nt] ...
     d_y_diff = y_grid(2) - y_grid(1);
     d_z_diff = z_grid(2) - z_grid(1);
     
-%     disp('d_x_diff')
-%     disp(d_x_diff)
-%     disp('d_y_diff')
-%     disp(d_y_diff)
-%     disp('d_z_diff')
-%     disp(d_z_diff)
+    disp('d_x_diff')
+    disp(d_x_diff)
+    disp('d_y_diff')
+    disp(d_y_diff)
+    disp('d_z_diff')
+    disp(d_z_diff)
     
     
     G_sum = 0;
@@ -74,6 +79,7 @@ function [dGdEx_sum, dGdEy_sum, dGdEz_sum, G_sum, xv_all, DG, xv_dual, Nt] ...
                     relative_n_norm(xv(ix_z(end)), xv_prev(ix_z_prev(end)),2);
                 disp('Nt:')
                 disp(Nt)
+               
 %                 disp('diff_x:')
 %                 disp(diff_x)
 %                 disp(diff_y)
@@ -88,14 +94,17 @@ function [dGdEx_sum, dGdEy_sum, dGdEz_sum, G_sum, xv_all, DG, xv_dual, Nt] ...
 %                 disp(delta_y)
 %                 disp(delta_z)
 
-                if (diff_x < 0.0001) && (diff_y < 0.0001) &&...
-                        (diff_z < 0.0001) && (delta_x < 0.5*d_x_diff) ...
+                if (diff_x < 0.01) && (diff_y < 0.01) &&...
+                        (diff_z < 0.01) && (delta_x < 0.5*d_x_diff) ...
                         && (delta_y < 0.5*d_y_diff) && (delta_z < 0.5*d_z_diff)
                     break
                 elseif (ii >1) 
                     break                  
                 elseif cnt == 1
                     continue
+                elseif cnt > 0
+                    break
+                    disp(Nt)
                 else
                     Nt = 2*Nt;
                     ts = linspace(t_start,t_end,Nt);

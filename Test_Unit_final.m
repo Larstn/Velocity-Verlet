@@ -53,6 +53,8 @@ E_z         = -centeredDiff(V, 3);
     imagesc(E_y(:,:,1))
     subplot(3,1,3)
     imagesc(E_z(:,:,1))
+%%
+    
 
 accelFunc = accelerationFunction( x_grid, y_grid, z_grid, ...
     n_charges, n_masses);
@@ -63,6 +65,8 @@ accelFunc = accelerationFunction( x_grid, y_grid, z_grid, ...
 
 [G, dGdxv] = hitObjective3Dtarget(xv, obj_weights, x_p, y_p, z_p, ...
     vx_p, vy_p, vz_p);
+
+G
 
 [systemMatrix, initMatrix, accelMatrix] = velocityVerletMatrices3D(ts);
 
@@ -83,7 +87,7 @@ for yy = 5:8
     [xv2, accel2] = velocityVerlet3D(ts, xv0, accelFunc(Ex2, E_y, E_z));
     G2 = hitObjective3D(xv2, obj_weights);
 
-    
+    G2
     dGdEx_meas(xx,yy) = (G2-G)/delta;
     
 
@@ -98,36 +102,45 @@ imagesc(x_grid, y_grid, dGdEx_meas');
 axis xy image
 colorbar
 title('Meas')
-
+%%
 
 nParticle = 1;
 
 hit_objective = @(x_v) hitObjective3D_wrap(...
             xv, x_p, y_p, z_p, vx_p, vy_p, vz_p, obj_weights);
 
-[dGdEx0, dGdEy0, dGdEz0, G0, xv00, DG, xv_dual] = VV_get_dual_E_final(n_charges, n_masses, E_x, E_y, E_z,  x_grid, y_grid, z_grid, xv0, nParticle, hit_objective);
+%[dGdEx0, dGdEy0, dGdEz0, G0, xv00, DG, xv_dual] = VV_get_dual_E_final(n_charges, n_masses, E_x, E_y, E_z,  x_grid, y_grid, z_grid, xv0, nParticle, hit_objective);
+
+VComsol = zeros(Nx, Ny, Nz, 3);
+VComsol(:,:,:,1) = E_x;
+VComsol(:,:,:,2) = E_y;
+VComsol(:,:,:,3) = E_z;
+
+[dGdEx_sum, dGdEy_sum, dGdEz_sum, G_sum, xv_all, DG, xv_dual, Nt] ...
+    = VV_get_dual_E_v20(n_charges, n_masses, VComsol, ...
+    x_grid, y_grid, z_grid, xv0, nParticle, hit_objective, ts);
 
 
 figure(4)
 subplot(2,1,1)
-imagesc(x_grid, y_grid, dGdEx0(:,:,1)');
+imagesc(x_grid, y_grid, dGdEx_sum(:,:,1)');
 axis xy image
 colorbar
 title('dual')
 
-
-Nx          = 11;
-Ny          = 11;
-Nz          = 2;
-
-
-
-V           = repmat(peaks(Nx), [1 1 2]); assert(Nx == Ny);
-V(:,:,2) = V(:,:,1);
-E_x         = -centeredDiff(V, 1);
-E_y         = -centeredDiff(V, 2);
-E_z         = -centeredDiff(V, 3);
-T_span      = [0 1];
+% 
+% Nx          = 11;
+% Ny          = 11;
+% Nz          = 2;
+% 
+% 
+% 
+% V           = repmat(peaks(Nx), [1 1 2]); assert(Nx == Ny);
+% V(:,:,2) = V(:,:,1);
+% E_x         = -centeredDiff(V, 1);
+% E_y         = -centeredDiff(V, 2);
+% E_z         = -centeredDiff(V, 3);
+% T_span      = [0 1];
 
 %nParticle = 1;
 %xv0 = zeros(6,nParticle);
