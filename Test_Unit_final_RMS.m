@@ -13,7 +13,7 @@ Nz          = 2;
 
 Nt = 100;
 
-xv0 = [0; 0; 0; .8; .499; 0]*(elementary_charge/electron_mass);
+xv0 = [0 0; 0 0.2; 0 0.3;.8 0.3; .499 .4; 0 0]*(elementary_charge/electron_mass);
 
 x_p = 0.25*(elementary_charge/electron_mass);
 y_p  = 0.3*(elementary_charge/electron_mass);
@@ -64,6 +64,7 @@ accelFunc = accelerationFunction( x_grid, y_grid, z_grid, ...
 [G, dGdxv] = hitObjective3Dtarget(xv, obj_weights, x_p, y_p, z_p, ...
     vx_p, vy_p, vz_p);
 
+G = sqrt(G.^2);
 [systemMatrix, initMatrix, accelMatrix] = velocityVerletMatrices3D(ts);
 
 ax1 = accel(:,1);
@@ -74,16 +75,16 @@ delta = 1e-6;
 dGdEx_meas = 0*E_x(:,:,1);
 
 
-for xx = 1:length(x_grid)
-for yy = 1:length(y_grid)
+for xx = 5:8
+for yy = 5:8
     fprintf('%i, %i\n', xx, yy);
     
     Ex2 = E_x;
     Ex2(xx,yy,1) = Ex2(xx,yy,1) + delta;
     [xv2, accel2] = velocityVerlet3D(ts, xv0, accelFunc(Ex2, E_y, E_z));
     G2 = hitObjective3D(xv2, obj_weights);
-
     
+    G2 = sqrt(G2.^2);
     dGdEx_meas(xx,yy) = (G2-G)/delta;
     
 
@@ -91,6 +92,8 @@ for yy = 1:length(y_grid)
     
 end
 end
+
+
 
 figure(4)
 subplot(2,1,2)
@@ -103,7 +106,7 @@ title('Meas')
 nParticle = 1;
 
 hit_objective = @(x_v) hitObjective3D_wrap(...
-            xv, x_p, y_p, z_p, vx_p, vy_p, vz_p, obj_weights);
+            x_v, x_p, y_p, z_p, vx_p, vy_p, vz_p, obj_weights);
 
 %[dGdEx0, dGdEy0, dGdEz0, G0, xv00, DG, xv_dual] = VV_get_dual_E_final(n_charges, n_masses, E_x, E_y, E_z,  x_grid, y_grid, z_grid, xv0, nParticle, hit_objective);
 [dGdEx_sum, dGdEy_sum, dGdEz_sum, G_sum, xv_all, DG, xv_dual, Nt] ...

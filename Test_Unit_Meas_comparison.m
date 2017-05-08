@@ -24,7 +24,7 @@ obj_weights = [1, 1, 1, 0, 0, 0];
 
 
 elementary_charge   = 1.60217662e-19;
-electron_mass       = 9.1093856e-31;
+electron_mass       = 1.6605e-27;
 %%
 
 

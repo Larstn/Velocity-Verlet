@@ -9,7 +9,7 @@ function accelFunc = accelerationFunction( x_grid, y_grid, z_grid, n_charges, n_
 
 
 elementary_charge   = 1.60217662e-19;
-electron_mass       = 9.1093856e-31;
+electron_mass       = 1.6605e-27;
 
 
 interpolant = @(E, x, y, z) interpn(x_grid, y_grid, z_grid, E, x, y, z, 'linear', 0);

@@ -1,8 +1,8 @@
 %% Calculates dGdE(x,y,z)
 % Calculates the derivative of the objective function with respect to the
 % electric field components at each grid with the dual function
-function [dGdEx_sum, dGdEy_sum, dGdEz_sum, G_sum, xv_all, DG, xv_dual, Nt] ...
-    = VV_get_dual_E_v20(n_charges, n_masses, E_x, E_y, E_z, ...
+function [dGdEx_sum, dGdEy_sum, dGdEz_sum, G_sum, xv_all, DG_sum, xv_dual, Nt] ...
+    = VV_get_dual_E_v21(n_charges, n_masses, E_x, E_y, E_z, ...
     x_grid, y_grid, z_grid, xv0, nParticle, objective_function, ts)
 
 
@@ -40,15 +40,15 @@ function [dGdEx_sum, dGdEy_sum, dGdEz_sum, G_sum, xv_all, DG, xv_dual, Nt] ...
 %     disp(d_y_diff)
 %     disp('d_z_diff')
 %     disp(d_z_diff)
+    xv   = zeros(6*Nt, nParticle);
     
     
-    G_sum = 0;
-    G_sum_old = 0;
+     G_sum = 0;
+%     G_sum_old = 0;
     dGdEx_sum = 0*E_x;
     dGdEy_sum = 0*E_y;
     dGdEz_sum = 0*E_z;
-    xv   = zeros(6*Nt, nParticle);
-    DG_sum = zeros(6*Nt,1)
+     DG_sum = zeros(6*Nt,1)
 
     for ii = 1:nParticle
         
@@ -116,7 +116,12 @@ function [dGdEx_sum, dGdEy_sum, dGdEz_sum, G_sum, xv_all, DG, xv_dual, Nt] ...
                    
         end
         %xv
-        [iix, iiy, iiz, w000, w001, w010, w011, w100, w101, w110, w111] ...
+        
+        xv_all(:,ii) = xv;
+    
+    
+    
+     [iix, iiy, iiz, w000, w001, w010, w011, w100, w101, w110, w111] ...
             = trilinear_weights(xv(ix_x), xv(ix_y), xv(ix_z), ...
                 x_grid, y_grid, z_grid);
 
@@ -129,14 +134,15 @@ function [dGdEx_sum, dGdEy_sum, dGdEz_sum, G_sum, xv_all, DG, xv_dual, Nt] ...
             x_grid, y_grid, z_grid, Nx, Ny, Nz, Nt);
 
         [G, DG] = objective_function(xv);
-        G_sum     = G_sum + G;
-       % G_sum_old = G_sum_old + G;
-        xv_all(:,ii) = xv;
-       % DG_sum = DG_sum + 2*DG*G;
+        %G_sum     = G_sum + G.^2;
+        %G_sum_old = G_sum_old + G;
+       % DG_sum = DG_sum + 1/nParticle*2*DG*G;
+        %G_sum = G_sum + G;
+        %DG_sum = DG_sum + DG;
 
-    
-  %  G_sum = sqrt(G_sum);
-   % DG_sum = 1/(2*G_sum) * DG_sum;
+   
+    %G_sum = sqrt(1/nParticle*G_sum);
+    %DG_sum = 1/(2*G_sum) * DG_sum;
     %DG_sum = G_sum_old * 2 * DG_sum * 1/(sqrt(G_sum_old^2)*2);
     
     
@@ -150,20 +156,27 @@ function [dGdEx_sum, dGdEy_sum, dGdEz_sum, G_sum, xv_all, DG, xv_dual, Nt] ...
         [S_p] = get_PrimalS(...
             Ix, Iy, Iz, E_x, E_y, E_z, Nt, ts, systemMatrix);
 
-        xv_dual = S_p' \ DG_sum;
+        xv_dual = S_p' \ DG;
 
-        [dGdEx_sum, dGdEy_sum, dGdEz_sum, ~] = getdGdE(xv_dual, accelMatrix, Nx, Ny, ...
+        [dGdEx, dGdEy, dGdEz, ~] = getdGdE(xv_dual, accelMatrix, Nx, Ny, ...
             Nz, ix_x, ix_y, ix_z, accelInterpMatrix);
-
-        dGdEx_sum = dGdEx_sum + dGdEx;
-        dGdEy_sum = dGdEy_sum + dGdEy;
-        dGdEz_sum = dGdEz_sum + dGdEz;
+        
+        G_sum = G_sum + G.^2;
+        
+        DG_sum = DG_sum + 1/nParticle*2*DG*G;
+        dGdEx_sum = dGdEx_sum + 1/nParticle*2*dGdEx*G;
+        dGdEy_sum = dGdEy_sum + 1/nParticle*2*dGdEy*G;
+        dGdEz_sum = dGdEz_sum + 1/nParticle*2*dGdEz*G;
        % DG = 0;
        % xv_dual = 0;
             
-    
     end
-
     
+
+    G_sum = sqrt(1/nParticle*G_sum);
+    dGdEx_sum = 0.5*dGdEx_sum ./ G_sum;
+    dGdEy_sum = 0.5*dGdEy_sum ./ G_sum;
+    dGdEz_sum = 0.5*dGdEz_sum ./ G_sum;
+
 end
 
