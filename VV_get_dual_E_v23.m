@@ -2,9 +2,13 @@
 % Calculates the derivative of the objective function with respect to the
 % electric field components at each grid with the dual function
 function [dGdEx_sum, dGdEy_sum, dGdEz_sum, G_sum, xv_all, DG_sum, xv_dual, Nt] ...
-    = VV_get_dual_E_v21(n_charges, n_masses, E_x, E_y, E_z, ...
+    = VV_get_dual_E_v23(n_charges, n_masses, V_Comsol, ...
     x_grid, y_grid, z_grid, xv0, nParticle, objective_function, ts)
 
+
+    E_x = V_Comsol(:,:,:,1);
+    E_y = V_Comsol(:,:,:,2);
+    E_z = V_Comsol(:,:,:,3);
 
     elementary_charge   = 1.60217662e-19;
     electron_mass       = 1.6605e-27;

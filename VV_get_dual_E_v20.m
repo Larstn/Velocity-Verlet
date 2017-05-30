@@ -39,12 +39,12 @@ function [dGdEx_sum, dGdEy_sum, dGdEz_sum, G_sum, xv_all, DG, xv_dual, Nt] ...
         d_z_diff = z_grid(2) - z_grid(1);
     end
     
-    disp('d_x_diff')
-    disp(d_x_diff)
-    disp('d_y_diff')
-    disp(d_y_diff)
-    disp('d_z_diff')
-    disp(d_z_diff)
+%     disp('d_x_diff')
+%     disp(d_x_diff)
+%     disp('d_y_diff')
+%     disp(d_y_diff)
+%     disp('d_z_diff')
+%     disp(d_z_diff)
     
     
     G_sum = 0;
@@ -53,7 +53,7 @@ function [dGdEx_sum, dGdEy_sum, dGdEz_sum, G_sum, xv_all, DG, xv_dual, Nt] ...
     dGdEy_sum = 0*E_y;
     dGdEz_sum = 0*E_z;
     xv   = zeros(6*Nt, nParticle);
-    DG_sum = zeros(6*Nt,1)
+    DG_sum = zeros(6*Nt,1);
 
     for ii = 1:nParticle
         
@@ -83,8 +83,8 @@ function [dGdEx_sum, dGdEy_sum, dGdEz_sum, G_sum, xv_all, DG, xv_dual, Nt] ...
                     relative_n_norm(xv(ix_y(end)),xv_prev(ix_y_prev(end)),2);
                 diff_z = ...
                     relative_n_norm(xv(ix_z(end)), xv_prev(ix_z_prev(end)),2);
-                disp('Nt:')
-                disp(Nt)
+%                 disp('Nt:')
+%                 disp(Nt)
                
 %                 disp('diff_x:')
 %                 disp(diff_x)
@@ -158,9 +158,9 @@ function [dGdEx_sum, dGdEy_sum, dGdEz_sum, G_sum, xv_all, DG, xv_dual, Nt] ...
         [S_p] = get_PrimalS(...
             Ix, Iy, Iz, E_x, E_y, E_z, Nt, ts, systemMatrix);
 
-        xv_dual = S_p' \ DG_sum;
+        xv_dual = S_p' \ DG;
 
-        [dGdEx_sum, dGdEy_sum, dGdEz_sum, ~] = getdGdE(xv_dual, accelMatrix, Nx, Ny, ...
+        [dGdEx, dGdEy, dGdEz, ~] = getdGdE(xv_dual, accelMatrix, Nx, Ny, ...
             Nz, ix_x, ix_y, ix_z, accelInterpMatrix);
 
         dGdEx_sum = dGdEx_sum + dGdEx;
