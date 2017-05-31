@@ -5,7 +5,8 @@ function [dGdEx_sum, dGdEy_sum, dGdEz_sum, G_sum, xv_all, DG_sum, xv_dual, Nt] .
     = VV_get_dual_E_v23(n_charges, n_masses, V_Comsol, ...
     x_grid, y_grid, z_grid, xv0, nParticle, objective_function, ts)
 
-    E_x = V_Comsol(:,:,:,1); 
+
+    E_x = V_Comsol(:,:,:,1);
     E_y = V_Comsol(:,:,:,2);
     E_z = V_Comsol(:,:,:,3);
 

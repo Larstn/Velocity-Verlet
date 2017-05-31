@@ -2,9 +2,14 @@
 % Calculates the derivative of the objective function with respect to the
 % electric field components at each grid with the dual function
 function [dGdEx_sum, dGdEy_sum, dGdEz_sum, G_sum, xv_all, DG, xv_dual, Nt] ...
-    = VV_get_dual_E_v20(n_charges, n_masses, E_x, E_y, E_z, ...
+    = VV_get_dual_E_v20(n_charges, n_masses, VComsol, ...
     x_grid, y_grid, z_grid, xv0, nParticle, objective_function, ts)
 
+
+
+    E_x = VComsol(:,:,:,1);
+    E_y = VComsol(:,:,:,2);
+    E_z = VComsol(:,:,:,3);
 
     elementary_charge   = 1.60217662e-19;
     electron_mass       = 1.6605e-27;
@@ -48,7 +53,7 @@ function [dGdEx_sum, dGdEy_sum, dGdEz_sum, G_sum, xv_all, DG, xv_dual, Nt] ...
     dGdEy_sum = 0*E_y;
     dGdEz_sum = 0*E_z;
     xv   = zeros(6*Nt, nParticle);
-    DG_sum = zeros(6*Nt,1)
+    DG_sum = zeros(6*Nt,1);
 
     for ii = 1:nParticle
         
@@ -78,8 +83,9 @@ function [dGdEx_sum, dGdEy_sum, dGdEz_sum, G_sum, xv_all, DG, xv_dual, Nt] ...
                     relative_n_norm(xv(ix_y(end)),xv_prev(ix_y_prev(end)),2);
                 diff_z = ...
                     relative_n_norm(xv(ix_z(end)), xv_prev(ix_z_prev(end)),2);
-                disp('Nt:')
-                disp(Nt)
+%                 disp('Nt:')
+%                 disp(Nt)
+               
 %                 disp('diff_x:')
 %                 disp(diff_x)
 %                 disp(diff_y)
@@ -94,13 +100,15 @@ function [dGdEx_sum, dGdEy_sum, dGdEz_sum, G_sum, xv_all, DG, xv_dual, Nt] ...
 %                 disp(delta_y)
 %                 disp(delta_z)
 
-                if (diff_x < 0.0001) && (diff_y < 0.0001) &&...
-                        (diff_z < 0.0001) && (delta_x < 0.5*d_x_diff) ...
+                if (diff_x < 0.01) && (diff_y < 0.01) &&...
+                        (diff_z < 0.01) && (delta_x < 0.5*d_x_diff) ...
                         && (delta_y < 0.5*d_y_diff) && (delta_z < 0.5*d_z_diff)
                     break
                 elseif (ii >1) 
                     break                  
                 elseif cnt == 1
+                    continue
+                elseif cnt > 0
                     break
                 else
                     Nt = 2*Nt;
@@ -152,7 +160,7 @@ function [dGdEx_sum, dGdEy_sum, dGdEz_sum, G_sum, xv_all, DG, xv_dual, Nt] ...
 
         xv_dual = S_p' \ DG;
 
-        [dGdEx_sum, dGdEy_sum, dGdEz_sum, ~] = getdGdE(xv_dual, accelMatrix, Nx, Ny, ...
+        [dGdEx, dGdEy, dGdEz, ~] = getdGdE(xv_dual, accelMatrix, Nx, Ny, ...
             Nz, ix_x, ix_y, ix_z, accelInterpMatrix);
 
         dGdEx_sum = dGdEx_sum + dGdEx;

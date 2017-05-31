@@ -36,72 +36,70 @@ function [dGdEx_sum, dGdEy_sum, dGdEz_sum, G_sum, xv_all, DG_sum, xv_dual, Nt] .
     end
 
      
-    for ii = 1:nParticle
-        
-        cnt = 0;
-        cnt_no_brakes = 0;
-        xv = zeros(6*Nt, 1);
-
-        while(1)
-
-            xv_start = xv0(:,ii);
-            xv_prev = xv;
-            ix_x_prev = ix_x;
-            ix_y_prev = ix_y;
-            ix_z_prev = ix_z;
-            
-            [ix_x, ix_y, ix_z, ~] =...
-                     get_Index3D(Nt);
-
-            [xv, ~] = velocityVerlet3D(...
-                ts, xv_start, accelFunc(E_x, E_y, E_z));
- 
-              if cnt > 0
-                diff_x = ...
-                    relative_n_norm(xv(ix_x(end)),xv_prev(ix_x_prev(end)),2)
-                diff_y = ...
-                    relative_n_norm(xv(ix_y(end)),xv_prev(ix_y_prev(end)),2)
-                diff_z = ...
-                    relative_n_norm(xv(ix_z(end)), xv_prev(ix_z_prev(end)),2)
-
-                
-                delta_x = max(abs(xv(ix_x(1:(end-1))) - xv(ix_x(2:end))));
-                delta_y = max(abs(xv(ix_y(1:(end-1))) - xv(ix_y(2:end)))); 
-                delta_z = max(abs(xv(ix_z(1:(end-1))) - xv(ix_z(2:end))));
-                
-                
-
-                if (diff_x < 1e-14) && (diff_y < 1e-14) &&...
-                        (diff_z < 1e-14) && (delta_x < 0.5*d_x_diff) ...
-                        && (delta_y < 0.5*d_y_diff) && (delta_z < 0.5*d_z_diff)
-                    disp('all good')
-                    Nt = Nt/2;
-                    ts = linspace(t_start,t_end,Nt);
-                    break                  
-                else
-                    disp('not good')
-                    Nt = 2*Nt;
-                    ts = linspace(t_start,t_end,Nt);
-                    cnt = cnt + 1;
-                    
-                end
-                
-              elseif cnt == 0
-                  
-                    disp('f?rste gang')
-                    Nt = 2*Nt;
-                    ts = linspace(t_start,t_end,Nt);
-                    cnt = cnt + 1;
-                    continue
-               end
-                   
-        end
-      
-    
-
-        
-        
-    end
+%     for ii = 1:nParticle
+%         
+%         cnt = 0;
+%         xv = zeros(6*Nt, 1);
+% 
+%         while(1)
+% 
+%             xv_start = xv0(:,ii);
+%             xv_prev = xv;
+%             ix_x_prev = ix_x;
+%             ix_y_prev = ix_y;
+%             ix_z_prev = ix_z;
+%             
+%             [ix_x, ix_y, ix_z, ~] =...
+%                      get_Index3D(Nt);
+% 
+%             [xv, ~] = velocityVerlet3D(...
+%                 ts, xv_start, accelFunc(E_x, E_y, E_z));
+%  
+%               if cnt > 0
+%                 diff_x = ...
+%                     relative_n_norm(xv(ix_x(end)),xv_prev(ix_x_prev(end)),2);
+%                 diff_y = ...
+%                     relative_n_norm(xv(ix_y(end)),xv_prev(ix_y_prev(end)),2);
+%                 diff_z = ...
+%                     relative_n_norm(xv(ix_z(end)), xv_prev(ix_z_prev(end)),2);
+% 
+%                 
+%                 delta_x = max(abs(xv(ix_x(1:(end-1))) - xv(ix_x(2:end))));
+%                 delta_y = max(abs(xv(ix_y(1:(end-1))) - xv(ix_y(2:end)))); 
+%                 delta_z = max(abs(xv(ix_z(1:(end-1))) - xv(ix_z(2:end))));
+%                 
+%                 
+% 
+%                 if (diff_x < 1e-3) && (diff_y < 1e-3) &&...
+%                         (diff_z < 1e-3) && (delta_x < 0.5*d_x_diff) ...
+%                         && (delta_y < 0.5*d_y_diff) && (delta_z < 0.5*d_z_diff)
+%                     Nt = Nt/2;
+%                     ts = linspace(t_start,t_end,Nt);
+%                     disp('good')
+%                     break                  
+%                 else
+%                     disp('higher')
+%                     Nt = 2*Nt;
+%                     ts = linspace(t_start,t_end,Nt);
+%                     cnt = cnt + 1;
+%                     
+%                 end
+%                 
+%               elseif cnt == 0
+%                    % break
+%                     Nt = 2*Nt;
+%                     ts = linspace(t_start,t_end,Nt);
+%                     cnt = cnt + 1;
+%                     continue
+%                end
+%                    
+%         end
+%       
+%     
+% 
+%         
+%         
+%     end
     xv_all = zeros(6*Nt,nParticle);
     [ix_x, ix_y, ix_z, ~] =...
                      get_Index3D(Nt);
@@ -110,6 +108,7 @@ function [dGdEx_sum, dGdEy_sum, dGdEz_sum, G_sum, xv_all, DG_sum, xv_dual, Nt] .
   disp(Nt)
 
   for i = 1:nParticle
+      xv_start = xv0(:,i);
       [xv, ~] = velocityVerlet3D(...
         ts, xv_start, accelFunc(E_x, E_y, E_z));
         xv_all(:,i) = xv;

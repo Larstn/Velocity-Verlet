@@ -156,7 +156,7 @@ title('Meas')
 
 nParticle = 2;
 
-Nt = 2;
+Nt = 100;
 ts = linspace(0, 1, Nt);
 
 
