@@ -1,6 +1,6 @@
 %% Input parameters for this test case
-clc 
-clear all
+%clc 
+%clear all
 %%
 % Setting natural constants
 % in case that they are needed
@@ -14,9 +14,9 @@ Nz          = 2;
 
 Nt = 100;
 
-x_grid = linspace(-1, 1, Nx)*(elementary_charge/electron_mass);
-y_grid = linspace(-1, 1, Ny)*(elementary_charge/electron_mass);
-z_grid = linspace(-1, 1, Nz)*(elementary_charge/electron_mass);
+x_grid = linspace(-1*(elementary_charge/electron_mass), 1*(elementary_charge/electron_mass), Nx);
+y_grid = linspace(-1*(elementary_charge/electron_mass), 1*(elementary_charge/electron_mass), Ny);
+z_grid = linspace(-1*(elementary_charge/electron_mass), 1*(elementary_charge/electron_mass), Nz);
 
 xv0 = [0 0; 0 0; 0 0;.8 .8; .499 .499; 0 0]*(elementary_charge/electron_mass);
 
@@ -166,9 +166,9 @@ V_Comsol(:,:,:,1) = E_x;
 V_Comsol(:,:,:,2) = E_y; 
 V_Comsol(:,:,:,3) = E_z;
 %[dGdEx0, dGdEy0, dGdEz0, G0, xv00, DG, xv_dual] = VV_get_dual_E_final(n_charges, n_masses, E_x, E_y, E_z,  x_grid, y_grid, z_grid, xv0, nParticle, hit_objective);
-[dGdEx_sum, dGdEy_sum, dGdEz_sum, G_sum, xv_all, DG, xv_dual, Nt] ...
-    = VV_get_dual_E_v21(n_charges, n_masses, V_Comsol, ...
-    x_grid, y_grid, z_grid, xv0, nParticle, hit_objective, ts);
+[dGdEx_sum, dGdEy_sum, dGdEz_sum, G_sum, xv_all, DG_old, xv_dual, Nt, sysMatrix, iix2, iiy2, iiz2, w0002, w0012, w0102, w0112, w1002, w1012, w1102, w1112, S_p,  accelInterpMatrix_old, xv, DG_o, accelMatrix_old, dGdEx_old] ...
+    = VV_get_dual_E_v21_objdebug(n_charges, n_masses, V_Comsol, ...
+    x_grid, y_grid, z_grid, xv0, 1, hit_objective, ts);
 
 
 figure(41)

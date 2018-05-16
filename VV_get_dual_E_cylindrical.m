@@ -1,16 +1,16 @@
 %% Calculates dGdE(x,y,z)
 % Calculates the derivative of the objective function with respect to the
 % electric field components at each grid with the dual function
-function [dGdEx_sum, dGdEy_sum, dGdEz_sum, G_sum, xv_all, DG_sum, xv_dual, Nt] ...
-    = VV_get_dual_E_v21(n_charges, n_masses, V_Comsol, ...
+function [dGdEx_dsum, dGdEy_dsum, dGdEz_sum, dGdV,dGdV_xr, G_sum, xv_all, DG_sum, xv_dual, Nt] ...
+    = VV_get_dual_E_cylindrical(n_charges, n_masses, V_Comsol, ...
     x_grid, y_grid, z_grid, xv0, nParticle, objective_function, ts)
 
 
 
 
-    E_x = V_Comsol(:,:,:,1);
-    E_y = V_Comsol(:,:,:,2);
-    E_z = V_Comsol(:,:,:,3);
+    E_x = V_Comsol{1};
+    E_y = V_Comsol{2};
+    E_z = V_Comsol{3};
     
     
     elementary_charge   = 1.60217662e-19;
@@ -85,8 +85,8 @@ function [dGdEx_sum, dGdEy_sum, dGdEz_sum, G_sum, xv_all, DG_sum, xv_dual, Nt] .
                     relative_n_norm(xv(ix_y(end)),xv_prev(ix_y_prev(end)),2);
                 diff_z = ...
                     relative_n_norm(xv(ix_z(end)), xv_prev(ix_z_prev(end)),2);
-                disp('Nt:')
-                disp(Nt)
+%                 disp('Nt:')
+%                 disp(Nt)
 %                 disp('diff_x:')
 %                 disp(diff_x)
 %                 disp(diff_y)
@@ -184,6 +184,33 @@ function [dGdEx_sum, dGdEy_sum, dGdEz_sum, G_sum, xv_all, DG_sum, xv_dual, Nt] .
     dGdEx_sum = 0.5*dGdEx_sum ./ G_sum;
     dGdEy_sum = 0.5*dGdEy_sum ./ G_sum;
     dGdEz_sum = 0.5*dGdEz_sum ./ G_sum;
+    
+    dGdEy_dsum = sum(dGdEy_sum,3);
+    dGdEx_dsum = sum(dGdEx_sum,3);
+    
+    dGdV = zeros(Nx,Ny,Nz);
+    d_x = x_grid(2) - x_grid(1);
+    d_y = y_grid(2) - y_grid(1);
+    d_z = z_grid(2) - z_grid(1);
+
+    dGdV(3:end,:,:)   = dGdV(3:end,:,:)     +...
+        (-0.5/d_x)*dGdEx_sum(2:end-1,:,:);
+    dGdV(1:end-2,:,:) = dGdV(1:end-2,:,:)   +...
+        (0.5/d_x)*dGdEx_sum(2:end-1,:,:);
+
+    dGdV(:,3:end,:)   = dGdV(:,3:end,:)     +...
+        (-0.5/d_y)*dGdEy_sum(:,2:end-1,:);
+    dGdV(:,1:end-2,:) = dGdV(:,1:end-2,:)   +...
+        (0.5/d_y)*dGdEy_sum(:,2:end-1,:);
+
+    dGdV(:,:,3:end)   = dGdV(:,:,3:end)     +...
+        (-0.5/d_z)*dGdEz_sum(:,:,2:end-1);
+    dGdV(:,:,1:end-2) = dGdV(:,:,1:end-2)   +...
+        (0.5/d_z)*dGdEz_sum(:,:,2:end-1);
+    
+    dGdV_sum = sum(dGdV,3);
+    dGdV_xr = reflect_back(dGdV_sum);
+
 
 end
 

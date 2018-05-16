@@ -107,8 +107,7 @@ nParticle = 1;
 hit_objective = @(x_v) hitObjective3D_wrap(...
             xv, x_p, y_p, z_p, vx_p, vy_p, vz_p, obj_weights);
 
-%[dGdEx0, dGdEy0, dGdEz0, G0, xv00, DG, xv_dual] = VV_get_dual_E_final(n_charges, n_masses, E_x, E_y, E_z,  x_grid, y_grid, z_grid, xv0, nParticle, hit_objective);
-<<<<<<< HEAD
+[dGdEx0, dGdEy0, dGdEz0, G0, xv00, DG, xv_dual] = VV_get_dual_E_final(n_charges, n_masses, E_x, E_y, E_z,  x_grid, y_grid, z_grid, xv0, nParticle, hit_objective);
 
 VComsol = zeros(Nx, Ny, Nz, 3);
 VComsol(:,:,:,1) = E_x;

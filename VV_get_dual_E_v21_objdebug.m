@@ -1,8 +1,8 @@
 %% Calculates dGdE(x,y,z)
 % Calculates the derivative of the objective function with respect to the
 % electric field components at each grid with the dual function
-function [dGdEx_sum, dGdEy_sum, dGdEz_sum, G_sum, xv_all, DG_sum, xv_dual, Nt] ...
-    = VV_get_dual_E_v21(n_charges, n_masses, V_Comsol, ...
+function [dGdEx_sum, dGdEy_sum, dGdEz_sum, G_sum, xv_all, DG_sum, xv_dual, Nt, systemMatrix,iix, iiy, iiz, w000, w001, w010, w011, w100, w101, w110, w111, S_p,  accelInterpMatrix, xv, DG, accelMatrix, dGdEx] ...
+    = VV_get_dual_E_v21_objdebug(n_charges, n_masses, V_Comsol, ...
     x_grid, y_grid, z_grid, xv0, nParticle, objective_function, ts)
 
 
@@ -57,7 +57,7 @@ function [dGdEx_sum, dGdEy_sum, dGdEz_sum, G_sum, xv_all, DG_sum, xv_dual, Nt] .
     dGdEz_sum = 0*E_z;
      DG_sum = zeros(6*Nt,1);
 
-    for ii = 1:nParticle
+    for ii = 1:1
         
         cnt = 0;
         
@@ -181,7 +181,7 @@ function [dGdEx_sum, dGdEy_sum, dGdEz_sum, G_sum, xv_all, DG_sum, xv_dual, Nt] .
     
 
     G_sum = sqrt(1/nParticle*G_sum);
-    dGdEx_sum = 0.5*dGdEx_sum ./ G_sum;
+    %dGdEx_sum = 0.5*dGdEx_sum ./ G_sum;
     dGdEy_sum = 0.5*dGdEy_sum ./ G_sum;
     dGdEz_sum = 0.5*dGdEz_sum ./ G_sum;
 
