@@ -39,7 +39,7 @@ classdef Velocity_Verlet
 
         function obj = Velocity_Verlet(xyz, resolution, Nparticles, ...
                 ParticleArray, Fobj, varargin)
-            
+%% Inputs: Dimensions, Resolutions, Array of Particles, Function Handle Objective Function, E_fields (3) or Potential (1)            
             assert((isa(xyz,'double') && isequal(size(xyz),[3 ,2])), ...
                 'Grid dimensions must be 3x2 doubles')
             obj.xyz = xyz;
@@ -50,9 +50,7 @@ classdef Velocity_Verlet
             obj.y_grid = linspace(xyz(2,1),xyz(2,2),resolution(2));            
             obj.z_grid = linspace(xyz(3,1),xyz(3,2),resolution(3));
             
-            %dx = (xyz(1,2) - xyz(1,1)) / (resolution(1) - 1);
-            %dy = (xyz(2,2) - xyz(2,1)) / (resolution(2) - 1);
-            %dz = (xyz(3,2) - xyz(3,1)) / (resolution(3) - 1);
+
             obj.dx = obj.x_grid(2) - obj.x_grid(1);
             obj.dy = obj.y_grid(2) - obj.y_grid(1);
             obj.dz = obj.z_grid(2) - obj.z_grid(1);
@@ -61,7 +59,6 @@ classdef Velocity_Verlet
             obj.ParticleArray = ParticleArray;
             obj.Fobj = Fobj;
             
-            disp(nargin)
             
             if nargin == 8
                 
@@ -144,7 +141,6 @@ classdef Velocity_Verlet
                  
                 G_sum = G_sum + G.^2;
         
-                %DG_sum = DG_sum + 1/nParticle*2*DG*G;
                 dGdEx_sum = dGdEx_sum + 1/nParticle*2*dGdEx*G;
                 dGdEy_sum = dGdEy_sum + 1/nParticle*2*dGdEy*G;
                 dGdEz_sum = dGdEz_sum + 1/nParticle*2*dGdEz*G;
@@ -175,23 +171,7 @@ classdef Velocity_Verlet
             
         end
             
-%             
-%                
-%             
-%             
-% 
-%         accelInterpMatrix = get_accelInterpmatrix(iix, iiy, iiz, ...
-%             w000, w001, w010, w011, w100, w101, w110, w111, ...
-%             Nx, Ny, Nz, Nt);
-%         
-%                 [Ix, Iy, Iz] = get_I(xv, ix_x, ix_y, ix_z,...
-%             x_grid, y_grid, z_grid, Nx, Ny, Nz, Nt);
-%         
-%                 [G, DG] = objective_function(xv);
 
-        
-%         end
-% 
         function accelFunc = accelerationFunction(obj)
 %% Creation of the acceleration Function
 % Creates the acceleration function with the given grid as well as the

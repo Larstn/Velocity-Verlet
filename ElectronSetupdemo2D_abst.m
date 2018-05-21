@@ -6,7 +6,7 @@
 function [F, DF, xv_all, x_p, y_p, Nt] = ElectronSetupdemo2D_abst(u, xCoarse, yCoarse, measBox, measNxy)
 
 
-%elementary_charge   = 1.60217662e-19;
+elementary_charge   = 1.60217662e-19;
 %electron_mass       = 9.1093856e-31;
 %atomic_mass = 1.6605e-27;
 
@@ -16,7 +16,6 @@ Nz          = 2;
 
 %Nt = 100;
 
-elementary_charge   = 1.60217662e-19;
 
 %u2_reshape = reshape(u2,[10, 10]);
 uu = zeros(Nx,Ny,Nz);
@@ -27,11 +26,11 @@ uu(:,:,2) = u;%u2_reshape;
 %x_grid = linspace(-1, 1, Nx)*(elementary_charge/atomic_mass);
 %y_grid = linspace(0, 1, round(0.5*Ny))*(elementary_charge/atomic_mass);
 %z_grid = linspace(-1, 1, Nz)*(elementary_charge/atomic_mass);
-x_grid = linspace(measBox(1),measBox(3),measNxy(1));%xCoarse;
-y_grid = linspace(measBox(2),measBox(4),measNxy(2));%yCoarse;
+%x_grid = linspace(measBox(1),measBox(3),measNxy(1));%xCoarse;
+%y_grid = linspace(measBox(2),measBox(4),measNxy(2));%yCoarse;
 %x_grid = linspace(-8.5e-3,14.5e-3,10);
 %y_grid = linspace(0,1.6e-3,10);
-z_grid = [-2, 0];
+%z_grid = [-2, 0];
 %xv0 = [-8e-3 -8e-3; 1e-3 -1e-3; -1e-3 -1e-3;10000 10000;0 0; 0 0];
 
  Nr = 50;
@@ -102,11 +101,12 @@ xv0 = [xx(:)'; yy(:)'; zeros(length(xx(:)),1)'; (vv.*cos(angles))'; (vv.*sin(ang
 %nParticle = 2;
 Nt = 1500;
 
-accelFunc = accelerationFunction( x_grid, r_grid, z_grid, ...
-            n_charges, n_masses);
-
         ts = linspace(0, end_time, Nt);
-        nParticle = size(xv0,2);
+
+%accelFunc = accelerationFunction( x_grid, r_grid, z_grid, ...
+         %   n_charges, n_masses);
+
+
         %xv_matrix = zeros(6*Nt,nParticle);
         
 %         [ix_x, ix_y, ix_z, ~] =...

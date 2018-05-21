@@ -56,44 +56,48 @@ classdef Particle
     
     methods
         function obj = Particle(Ev,Evstr,nm,nc,xyzi, tstart, tend, Nt)
-            assert(isa(nc,'double'),'Number of elementary charges must be a double')     
-            assert(isa(nm,'double'),'Number of unit masses must be a double') 
-            assert((isa(xyzi,'double') && isequal(size(xyzi),[3 ,1])), 'Initial Position must be an row vector of doubles length 3')
-            assert(strcmp(Evstr,'Energy') || strcmp(Evstr,'Velocity'), 'Allowed modes: Velocity or Energy')
-            assert(isa(tstart,'double'),'Start Time must be a double') 
-            assert(isa(tend,'double'),'End Time must be a double') 
-            assert(isa(Nt,'double'),'Number of Timesteps must be a double') 
-
             
-            if strcmp(Evstr,'Energy')
-                 assert((isa(Ev,'double') && isequal(size(Ev),[3 ,1])), 'Energy Vector must contain two angles (size = 1,3)')
-                 
-                 obj.E_init = Ev(1);
-                 obj.v_init_abs = sqrt(2*Ev/(nm*u));
-                 
-                 obj.v_init = zeros(1,3);
-                 obj.v_init(1) = obj.v_init_abs*cos(Ev(2))*sin(Ev(3));
-                 obj.v_init(2) = obj.v_init_abs*sin(Ev(2))*sin(Ev(3));
-                 obj.v_init(3) = obj.v_init_abs*cos(Ev(3));
-                 
-            elseif strcmp(Evstr,'Velocity')
-                 assert((isa(Ev,'double') && isequal(size(Ev),[3 ,1])), 'Velocity Vector must contain 3 (carthesian) elements (size = 1,3)')
+            if nargin > 0
+            %% Inputs: Energy/Velocity, String: 'Energy' or 'Velocity', n_charges, n_masses, initial positions, start time, end time, time steps
+                assert(isa(nc,'double'),'Number of elementary charges must be a double')     
+                assert(isa(nm,'double'),'Number of unit masses must be a double') 
+                assert((isa(xyzi,'double') && isequal(size(xyzi),[3 ,1])), 'Initial Position must be an row vector of doubles length 3')
+                assert(strcmp(Evstr,'Energy') || strcmp(Evstr,'Velocity'), 'Allowed modes: Velocity or Energy')
+                assert(isa(tstart,'double'),'Start Time must be a double') 
+                assert(isa(tend,'double'),'End Time must be a double') 
+                assert(isa(Nt,'double'),'Number of Timesteps must be a double') 
 
-                 obj.v_init_abs = norm(Ev);
-                 obj.E_init = 0.5*nm*obj.u*norm(Ev)^2;
-                 
-                 obj.v_init = zeros(1,3);
-                 obj.v_init(1) = Ev(1);
-                 obj.v_init(2) = Ev(2);
-                 obj.v_init(3) = Ev(3);
+
+                if strcmp(Evstr,'Energy')
+                     assert((isa(Ev,'double') && isequal(size(Ev),[3 ,1])), 'Energy Vector must contain two angles (size = 1,3)')
+
+                     obj.E_init = Ev(1);
+                     obj.v_init_abs = sqrt(2*Ev/(nm*u));
+
+                     obj.v_init = zeros(1,3);
+                     obj.v_init(1) = obj.v_init_abs*cos(Ev(2))*sin(Ev(3));
+                     obj.v_init(2) = obj.v_init_abs*sin(Ev(2))*sin(Ev(3));
+                     obj.v_init(3) = obj.v_init_abs*cos(Ev(3));
+
+                elseif strcmp(Evstr,'Velocity')
+                     assert((isa(Ev,'double') && isequal(size(Ev),[3 ,1])), 'Velocity Vector must contain 3 (carthesian) elements (size = 1,3)')
+
+                     obj.v_init_abs = norm(Ev);
+                     obj.E_init = 0.5*nm*obj.u*norm(Ev)^2;
+
+                     obj.v_init = zeros(1,3);
+                     obj.v_init(1) = Ev(1);
+                     obj.v_init(2) = Ev(2);
+                     obj.v_init(3) = Ev(3);
+                end
+
+                obj.nmass = nm;
+                obj.ncharges = nc;
+                obj.xyz_init = xyzi;
+                obj.t_start = tstart;
+                obj.t_end = tend;
+                obj.Nt = Nt;
             end
-            
-            obj.nmass = nm;
-            obj.ncharges = nc;
-            obj.xyz_init = xyzi;
-            obj.t_start = tstart;
-            obj.t_end = tend;
-            obj.Nt = Nt;
             
         end
         

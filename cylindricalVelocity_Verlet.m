@@ -12,7 +12,7 @@ classdef cylindricalVelocity_Verlet
         ParticleArray
         
         Fobj            %objective function (needs to be a function handle)
-        
+        accelFunc
     end 
     
     properties (SetAccess=private, GetAccess=public, Hidden)
@@ -39,64 +39,61 @@ classdef cylindricalVelocity_Verlet
     
     methods        
 
-        function obj = Velocity_Verlet(xyz, resolution, Nparticles, ...
-                ParticleArray, Fobj, varargin)
-            
+        function obj = cylindricalVelocity_Verlet(xyz, resolution, ParticleArray, Fobj,varargin)
+%% Inputs: Dimensions, Resolutions, Array of Particles, Function Handle Objective Function, E_fields (3) or Potential (1)
             assert((isa(xyz,'double') && isequal(size(xyz),[3 ,2])), ...
                 'Grid dimensions must be 3x2 doubles')
             obj.xyz = xyz;
             assert((isa(resolution,'double') && isequal(size(resolution)...
                 ,[1 ,3])), 'Resolution must be 1x3 doubles')
-            obj.resolution = resolution;
+            %obj.resolution = resolution;
             obj.x_grid = linspace(xyz(1,1),xyz(1,2),resolution(1));                        
             obj.y_grid = linspace(xyz(2,1),xyz(2,2),resolution(2));            
             obj.z_grid = linspace(xyz(3,1),xyz(3,2),resolution(3));
             obj.r_grid = [-obj.y_grid(end:-1:2) obj.y_grid];
+            obj.resolution = [length(obj.x_grid), length(obj.r_grid), length(obj.z_grid)];
             
-            %dx = (xyz(1,2) - xyz(1,1)) / (resolution(1) - 1);
-            %dy = (xyz(2,2) - xyz(2,1)) / (resolution(2) - 1);
-            %dz = (xyz(3,2) - xyz(3,1)) / (resolution(3) - 1);
+            
             obj.dx = obj.x_grid(2) - obj.x_grid(1);
             obj.dy = obj.y_grid(2) - obj.y_grid(1);
             obj.dz = obj.z_grid(2) - obj.z_grid(1);
-            obj.dr = obj.y_grid;
+            obj.dr = obj.dy;
             
-            obj.Nparticles = Nparticles;
+            obj.Nparticles = length(ParticleArray);
             obj.ParticleArray = ParticleArray;
             obj.Fobj = Fobj;
             
-            disp(nargin)
             
-            if nargin == 8
+            if nargin == 7
                 
                 assert((isa(varargin{1},'double') && ...
-                    isequal(size(varargin{1}),[resolution(1),resolution(2),resolution(3)])), ...
+                    isequal(size(varargin{1}),[resolution(1),resolution(2)])), ...
                     'E_x field must be the same size as the resolution')
                 assert((isa(varargin{2},'double') && ...
-                    isequal(size(varargin{2}),[resolution(1),resolution(2),resolution(3)])), ...
+                    isequal(size(varargin{2}),[resolution(1),resolution(2)])), ...
                     'E_y field must be the same size as the resolution')
                 assert((isa(varargin{3},'double')&& ...
-                    isequal(size(varargin{3}),[resolution(1),resolution(2),resolution(3)])), ...
+                    isequal(size(varargin{3}),[resolution(1),resolution(2)])), ...
                     'E_z field must be the same size as the resolution')
                 
                 E_x     = cat(3,varargin{1},varargin{1});
                 obj.Ex = [E_x(:,end:-1:2,:) E_x(:,:,:)];
                 E_y     = cat(3,varargin{2},varargin{2});
-                obj.Ey = [E_y(:,end:-1:2,:) E_y(:,:,:)];
+                obj.Er = [E_y(:,end:-1:2,:) E_y(:,:,:)];
                 E_z     = cat(3,varargin{2},varargin{2});
                 obj.Ez = [E_z(:,end:-1:2,:) E_z(:,:,:)];
                 
                 obj.V = cumsum(varargin{1},1)*obj.dx + cumsum(varargin{2},2)*obj.dy + cumsum(varargin{3},3)*obj.dz;
                 
-            elseif nargin == 6
+            elseif nargin == 5
                 assert((isa(varargin{1},'double') && ...
-                    isequal(size(varargin{1}),[resolution(1),resolution(2),resolution(3)])), ...
+                    isequal(size(varargin{1}),[resolution(1),resolution(2)])), ...
                     'V field must be the same size as the resolution')
                 U       = cat(3,varargin{1},varargin{1});
                 obj.V   = [U(:,end:-1:2,:) U(:,:,:)];
-                obj.Ex  = -centeredDiff(varargin{1}, 1) / obj.dx;
-                obj.Er  = -centeredDiff(varargin{1}, 2) / obj.dr;
-                obj.Ez  = -centeredDiff(varargin{1}, 3) / obj.dz;
+                obj.Ex  = -centeredDiff(obj.V, 1) / obj.dx;
+                obj.Er  = -centeredDiff(obj.V, 2) / obj.dr;
+                obj.Ez  = -centeredDiff(obj.V, 3) / obj.dz;
 
             else
                 fprintf("The input must either be three electric fields or one potential")
@@ -114,10 +111,16 @@ classdef cylindricalVelocity_Verlet
                 dGdEz_sum = 0*obj.Ez;
                 nParticle = size(obj.ParticleArray,2);
             
-            for ii = 1:size(obj.ParticleArray,2)
-                
-                accelFunc = obj.accelerationFunction();
-                obj.ParticleArray(ii).accelerationFunction = accelFunc(obj.Ex, obj.Er, obj.Ez);
+            for ii = 1:length(obj.ParticleArray)
+%                     %elementary_charge   = 1.60217662e-19;
+%                     ion_mass = 5.1477e-26;
+%                     electron_mass       = 1.6605e-27;
+% 
+%                     n_charges = -1;
+%                     n_masses = ion_mass/electron_mass;
+
+                obj.accelFunc = obj.accelerationFunction();
+                obj.ParticleArray(ii).accelerationFunction = obj.accelFunc(obj.Ex, obj.Er, obj.Ez);
                 obj.ParticleArray(ii) = obj.ParticleArray(ii).runTrajectory();
                 
                 [iix, iiy, iiz, w000, w001, w010, w011, w100, w101, w110, w111] ...
@@ -167,7 +170,7 @@ classdef cylindricalVelocity_Verlet
             
             dGdV(3:end,:,:)   = dGdV(3:end,:,:)     +...
                 (-0.5/obj.dx)*dGdEx_sum(2:end-1,:,:);
-            dGdV(1:end-2,:,:) = obj.dFdV(1:end-2,:,:)   +...
+            dGdV(1:end-2,:,:) = dGdV(1:end-2,:,:)   +...
                 (0.5/obj.dx)*dGdEx_sum(2:end-1,:,:);
 
             dGdV(:,3:end,:)   = dGdV(:,3:end,:)     +...
@@ -206,11 +209,9 @@ classdef cylindricalVelocity_Verlet
 % input
 %%
 
-       % elementary_charge   = 1.60217662e-19;
-       % electron_mass       = 1.6605e-27;
 
 
-        interpolant = @(E, x, y, z) interpn(obj.x_grid, obj.y_grid, obj.z_grid, E, x, y, z, 'linear', 0);
+        interpolant = @(E, x, y, z) interpn(obj.x_grid, obj.r_grid, obj.z_grid, E, x, y, z, 'linear', 0);
 
 
         accelFunc = @(Ex,Ey,Ez) @(t, xyz) [...
@@ -249,12 +250,12 @@ classdef cylindricalVelocity_Verlet
             if isrow(x) && ~isrow(obj.x_grid)
                 row = @(A) reshape(A, 1, []);
                 obj.x_grid = row(obj.x_grid);
-                obj.y_grid = row(obj.y_grid);
+                obj.r_grid = row(obj.r_grid);
                 obj.z_grid = row(obj.z_grid);
             elseif iscolumn(x) && ~iscolumn(obj.x_grid)
                 col = @(A) reshape(A, [], 1);
                 obj.x_grid = col(obj.x_grid);
-                obj.y_grid = col(obj.y_grid);
+                obj.r_grid = col(obj.r_grid);
                 obj.z_grid = col(obj.z_grid);
             end
 
@@ -266,14 +267,14 @@ classdef cylindricalVelocity_Verlet
 
 
 
-            log_vec = ((x >= obj.x_grid(1)) & (x <= obj.x_grid(end)) & (y >= obj.y_grid(1)) & (y <= obj.y_grid(end)) & (z >= obj.z_grid(1)) & (z <= obj.z_grid(end)));
+            log_vec = ((x >= obj.x_grid(1)) & (x <= obj.x_grid(end)) & (y >= obj.r_grid(1)) & (y <= obj.r_grid(end)) & (z >= obj.z_grid(1)) & (z <= obj.z_grid(end)));
 
             i_x = ones(size(x));
             i_y = ones(size(y));
             i_z = ones(size(z));
 
             i_x(log_vec) = floor( (x(log_vec) - obj.x_grid(1))/obj.dx) +1;
-            i_y(log_vec) = floor( (y(log_vec) - obj.y_grid(1))/obj.dy) +1;
+            i_y(log_vec) = floor( (y(log_vec) - obj.r_grid(1))/obj.dy) +1;
             i_z(log_vec) = floor( (z(log_vec) - obj.z_grid(1))/obj.dz) +1;
 
             % Handle a special case: when x == x_grid(end) we round its position DOWN
@@ -282,11 +283,11 @@ classdef cylindricalVelocity_Verlet
             % is in the last cell.
 
             i_x(x == obj.x_grid(end)) = length(obj.x_grid)-1;
-            i_y(y == obj.y_grid(end)) = length(obj.y_grid)-1;
+            i_y(y == obj.r_grid(end)) = length(obj.r_grid)-1;
             i_z(z == obj.z_grid(end)) = length(obj.z_grid)-1;
 
             x_c = obj.x_grid(i_x);
-            y_c = obj.y_grid(i_y);
+            y_c = obj.r_grid(i_y);
             z_c = obj.z_grid(i_z);
 
             % Recover weights
@@ -382,19 +383,19 @@ classdef cylindricalVelocity_Verlet
             assert(isvector(y))
             assert(isvector(z))
             assert(isvector(obj.x_grid))
-            assert(isvector(obj.y_grid))
+            assert(isvector(obj.r_grid))
             assert(isvector(obj.z_grid))
             assert(isequal(size(x), size(y), size(z)))
             % Coerce x_grid etc. to be row vectors if x, y, z are row vectors...
             if isrow(x) && ~isrow(obj.x_grid)
                 row = @(A) reshape(A, 1, []);
                 obj.x_grid = row(obj.x_grid);
-                obj.y_grid = row(obj.y_grid);
+                obj.r_grid = row(obj.r_grid);
                 obj.z_grid = row(obj.z_grid);
             elseif iscolumn(x) && ~iscolumn(obj.x_grid)
                 col = @(A) reshape(A, [], 1);
                 obj.x_grid = col(obj.x_grid);
-                obj.y_grid = col(obj.y_grid);
+                obj.r_grid = col(obj.r_grid);
                 obj.z_grid = col(obj.z_grid);
             end
 
@@ -403,14 +404,14 @@ classdef cylindricalVelocity_Verlet
 
             % TODO: what does "log" mean in "log_vec"? - It was supposed to mean
             % "Logic" just because it is a binary vector
-            log_vec = ((x >= obj.x_grid(1)) & (x <= obj.x_grid(end)) & (y >= obj.y_grid(1)) & (y <= obj.y_grid(end)) & (z >= obj.z_grid(1)) & (z <= obj.z_grid(end)));
+            log_vec = ((x >= obj.x_grid(1)) & (x <= obj.x_grid(end)) & (y >= obj.r_grid(1)) & (y <= obj.r_grid(end)) & (z >= obj.z_grid(1)) & (z <= obj.z_grid(end)));
 
             i_x = ones(size(x));
             i_y = ones(size(y));
             i_z = ones(size(z));
 
             i_x(log_vec) = floor( (x(log_vec) - obj.x_grid(1))/obj.dx) +1;
-            i_y(log_vec) = floor( (y(log_vec) - obj.y_grid(1))/obj.dy) +1;
+            i_y(log_vec) = floor( (y(log_vec) - obj.r_grid(1))/obj.dy) +1;
             i_z(log_vec) = floor( (z(log_vec) - obj.z_grid(1))/obj.dz) +1;
 
             % Handle a special case: when x == obj.x_grid(end) we round its position DOWN
@@ -419,11 +420,11 @@ classdef cylindricalVelocity_Verlet
             % is in the last cell.
 
             i_x(x == obj.x_grid(end)) = length(obj.x_grid)-1;
-            i_y(y == obj.y_grid(end)) = length(obj.y_grid)-1;
+            i_y(y == obj.r_grid(end)) = length(obj.r_grid)-1;
             i_z(z == obj.z_grid(end)) = length(obj.z_grid)-1;
 
             x_c = obj.x_grid(i_x);
-            y_c = obj.y_grid(i_y);
+            y_c = obj.r_grid(i_y);
             z_c = obj.z_grid(i_z);
 
             % Recover weights
@@ -501,7 +502,7 @@ function [partial_x_accelInterpMatrix, i_x, i_y, i_z, w000, w001, w010, w011, w1
             assert(isvector(y))
             assert(isvector(z))
             assert(isvector(obj.x_grid))
-            assert(isvector(obj.y_grid))
+            assert(isvector(obj.r_grid))
             assert(isvector(obj.z_grid))
             assert(isequal(size(x), size(y), size(z)))
 
@@ -509,26 +510,26 @@ function [partial_x_accelInterpMatrix, i_x, i_y, i_z, w000, w001, w010, w011, w1
             if isrow(x) && ~isrow(obj.x_grid)
                 row = @(A) reshape(A, 1, []);
                 obj.x_grid = row(obj.x_grid);
-                obj.y_grid = row(obj.y_grid);
+                obj.r_grid = row(obj.r_grid);
                 obj.z_grid = row(obj.z_grid);
             elseif iscolumn(x) && ~iscolumn(obj.x_grid)
                 col = @(A) reshape(A, [], 1);
                 obj.x_grid = col(obj.x_grid);
-                obj.y_grid = col(obj.y_grid);
+                obj.r_grid = col(obj.r_grid);
                 obj.z_grid = col(obj.z_grid);
             end
 
 
             % TODO: what does "log" mean in "log_vec"? - It was supposed to mean
             % "Logic" just because it is a binary vector
-            log_vec = ((x >= obj.x_grid(1)) & (x <= obj.x_grid(end)) & (y >= obj.y_grid(1)) & (y <= obj.y_grid(end)) & (z >= obj.z_grid(1)) & (z <= obj.z_grid(end)));
+            log_vec = ((x >= obj.x_grid(1)) & (x <= obj.x_grid(end)) & (y >= obj.r_grid(1)) & (y <= obj.r_grid(end)) & (z >= obj.z_grid(1)) & (z <= obj.z_grid(end)));
 
             i_x = ones(size(x));
             i_y = ones(size(y));
             i_z = ones(size(z));
 
             i_x(log_vec) = floor( (x(log_vec) - obj.x_grid(1))/obj.dx) +1;
-            i_y(log_vec) = floor( (y(log_vec) - obj.y_grid(1))/obj.dy) +1;
+            i_y(log_vec) = floor( (y(log_vec) - obj.r_grid(1))/obj.dy) +1;
             i_z(log_vec) = floor( (z(log_vec) - obj.z_grid(1))/obj.dz) +1;
 
             % Handle a special case: when x == obj.x_grid(end) we round its position DOWN
@@ -537,11 +538,11 @@ function [partial_x_accelInterpMatrix, i_x, i_y, i_z, w000, w001, w010, w011, w1
             % is in the last cell.
 
             i_x(x == obj.x_grid(end)) = length(obj.x_grid)-1;
-            i_y(y == obj.y_grid(end)) = length(obj.y_grid)-1;
+            i_y(y == obj.r_grid(end)) = length(obj.r_grid)-1;
             i_z(z == obj.z_grid(end)) = length(obj.z_grid)-1;
 
             x_c = obj.x_grid(i_x);
-            y_c = obj.y_grid(i_y);
+            y_c = obj.r_grid(i_y);
             z_c = obj.z_grid(i_z);
 
             % Recover weights
@@ -629,7 +630,7 @@ function [partial_x_accelInterpMatrix, i_x, i_y, i_z, w000, w001, w010, w011, w1
             assert(isvector(y))
             assert(isvector(z))
             assert(isvector(obj.x_grid))
-            assert(isvector(obj.y_grid))
+            assert(isvector(obj.r_grid))
             assert(isvector(obj.z_grid))
             assert(isequal(size(x), size(y), size(z)))
 
@@ -637,12 +638,12 @@ function [partial_x_accelInterpMatrix, i_x, i_y, i_z, w000, w001, w010, w011, w1
             if isrow(x) && ~isrow(obj.x_grid)
                 row = @(A) reshape(A, 1, []);
                 obj.x_grid = row(obj.x_grid);
-                obj.y_grid = row(obj.y_grid);
+                obj.r_grid = row(obj.r_grid);
                 obj.z_grid = row(obj.z_grid);
             elseif iscolumn(x) && ~iscolumn(obj.x_grid)
                 col = @(A) reshape(A, [], 1);
                 obj.x_grid = col(obj.x_grid);
-                obj.y_grid = col(obj.y_grid);
+                obj.r_grid = col(obj.r_grid);
                 obj.z_grid = col(obj.z_grid);
             end
 
@@ -650,14 +651,14 @@ function [partial_x_accelInterpMatrix, i_x, i_y, i_z, w000, w001, w010, w011, w1
 
             % TODO: what does "log" mean in "log_vec"? - It was supposed to mean
             % "Logic" just because it is a binary vector
-            log_vec = ((x >= obj.x_grid(1)) & (x <= obj.x_grid(end)) & (y >= obj.y_grid(1)) & (y <= obj.y_grid(end)) & (z >= obj.z_grid(1)) & (z <= obj.z_grid(end)));
+            log_vec = ((x >= obj.x_grid(1)) & (x <= obj.x_grid(end)) & (y >= obj.r_grid(1)) & (y <= obj.r_grid(end)) & (z >= obj.z_grid(1)) & (z <= obj.z_grid(end)));
 
             i_x = ones(size(x));
             i_y = ones(size(y));
             i_z = ones(size(z));
 
             i_x(log_vec) = floor( (x(log_vec) - obj.x_grid(1))/obj.dx) +1;
-            i_y(log_vec) = floor( (y(log_vec) - obj.y_grid(1))/obj.dy) +1;
+            i_y(log_vec) = floor( (y(log_vec) - obj.r_grid(1))/obj.dy) +1;
             i_z(log_vec) = floor( (z(log_vec) - obj.z_grid(1))/obj.dz) +1;
 
             % Handle a special case: when x == obj.x_grid(end) we round its position DOWN
@@ -666,11 +667,11 @@ function [partial_x_accelInterpMatrix, i_x, i_y, i_z, w000, w001, w010, w011, w1
             % is in the last cell.
 
             i_x(x == obj.x_grid(end)) = length(obj.x_grid)-1;
-            i_y(y == obj.y_grid(end)) = length(obj.y_grid)-1;
+            i_y(y == obj.r_grid(end)) = length(obj.r_grid)-1;
             i_z(z == obj.z_grid(end)) = length(obj.z_grid)-1;
 
             x_c = obj.x_grid(i_x);
-            y_c = obj.y_grid(i_y);
+            y_c = obj.r_grid(i_y);
             z_c = obj.z_grid(i_z);
 
             % Recover weights
@@ -831,9 +832,9 @@ function [partial_x_accelInterpMatrix, i_x, i_y, i_z, w000, w001, w010, w011, w1
 %% Calculation of the Primal Matrix
 % This function calculates the matrix of the Primal System (for a
 % derivation with respect to the electric field).
-                D_I_1          = [Ix*obj.Ex(:); Ix*obj.Ey(:); Ix*obj.Ez(:)]; % [kg*m*s^-2*A^-1]
-                D_I_2          = [Iy*obj.Ex(:); Iy*obj.Ey(:); Iy*obj.Ez(:)];
-                D_I_3          = [Iz*obj.Ex(:); Iz*obj.Ey(:); Iz*obj.Ez(:)];
+                D_I_1          = [Ix*obj.Ex(:); Ix*obj.Er(:); Ix*obj.Ez(:)]; % [kg*m*s^-2*A^-1]
+                D_I_2          = [Iy*obj.Ex(:); Iy*obj.Er(:); Iy*obj.Ez(:)];
+                D_I_3          = [Iz*obj.Ex(:); Iz*obj.Er(:); Iz*obj.Ez(:)];
 
                 grad_E_1 = zeros(1,3*obj.ParticleArray(ii).Nt);
                 grad_E_2 = zeros(1,3*obj.ParticleArray(ii).Nt);
@@ -867,7 +868,7 @@ function [partial_x_accelInterpMatrix, i_x, i_y, i_z, w000, w001, w010, w011, w1
 
         end
         
-        function dGdV_xr = reflect_back(dGdV)
+        function dGdV_xr = reflect_back(obj,dGdV)
 
             two_r = size(dGdV,2);
            %dGdV_xr = zeros(size(dGdV,1),round(two_r/2),size(dGdV,3));
@@ -880,7 +881,7 @@ function [partial_x_accelInterpMatrix, i_x, i_y, i_z, w000, w001, w010, w011, w1
         function plotdFdEx(obj)
             
             figure(1010)
-            imagesc(obj.x_grid,obj.y_grid, obj.dFdEx(:,:,1)')
+            imagesc(obj.x_grid,obj.r_grid, obj.dFdEx(:,:,1)')
             axis xy image
             colorbar
             xlabel('x [m]')
