@@ -21,62 +21,47 @@ vy_p = 0*(elementary_charge/electron_mass);
 vz_p = 0*(elementary_charge/electron_mass);
 
 obj_weights = [1, 1, 1, 0, 0, 0];
-
 n_charges = 1;
 n_masses = 1;
 nParticle = 2;
-
-
 ts = linspace(0, 1, Nt);
 
-
-
 V           = repmat(peaks(Nx), [1 1 2]); assert(Nx == Ny);
-
 V(:,:,2) = V(:,:,1);
-
 E_x         = -centeredDiff(V, 1);
 E_y         = -centeredDiff(V, 2);
 E_z         = -centeredDiff(V, 3);
 
-hit_objective = @(x_v) hitObjective3D_wrap(...
-            x_v, x_p, y_p, z_p, vx_p, vy_p, vz_p, obj_weights);
-        
-        
-dGdEx_meas = 0*E_x(:,:,1);
-
 accelFunc = accelerationFunction( x_grid, y_grid, z_grid, ...
     n_charges, n_masses);
-
+hit_objective = @(x_v) hitObjective3D_wrap(...
+            x_v, x_p, y_p, z_p, vx_p, vy_p, vz_p, obj_weights);
 
 [xv, accel] = velocityVerlet3D(ts, xv0(:,1), accelFunc(E_x, E_y, E_z));
 [xv2, accel] = velocityVerlet3D(ts, xv0(:,2), accelFunc(E_x, E_y, E_z));
-
-
 G = sqrt(1/nParticle*(hit_objective(xv).^2 + hit_objective(xv2).^2));
 
+dGdEx_meas = 0*E_x(:,:,1);
 delta = 1e-3;
 
-
-for xx = 4:9%1:length(x_grid)
-    for yy = 4:9%1:length(y_grid)
+for xx = 4:9
+    for yy = 4:9
         fprintf('%i, %i\n', xx, yy);
 
         Ex2 = E_x;
         Ex2(xx,yy,1) = Ex2(xx,yy,1) + delta;
-        [xv3, accel2] = velocityVerlet3D(ts, xv0, accelFunc(Ex2, E_y, E_z));
-        [xv4, accel2] = velocityVerlet3D(ts, xv0, accelFunc(Ex2, E_y, E_z));
+        [xv3, accel2] = velocityVerlet3D(ts, xv0, ...
+            accelFunc(Ex2, E_y, E_z));
+        [xv4, accel2] = velocityVerlet3D(ts, xv0, ...
+            accelFunc(Ex2, E_y, E_z));
 
-        G2 = sqrt(1/nParticle*(hit_objective(xv3).^2 + hit_objective(xv4).^2));
+        G2 = sqrt(1/nParticle*(hit_objective(xv3).^2 ...
+            + hit_objective(xv4).^2));
 
         dGdEx_meas(xx,yy) = dGdEx_meas(xx,yy) + (G2-G)/delta;
 
-
-
-
     end
 end
-
 
 figure(40)
 imagesc(x_grid, y_grid, dGdEx_meas');
@@ -84,42 +69,27 @@ axis xy image
 colorbar
 title('Meas') 
 
+particles = Particle(xv0(4:6,1),'Velocity',n_charges,n_masses, ...
+    xv0(1:3,1), 0, 1, Nt);
 
-
-
-nParticle = 1;
-
-
-hit_objective = @(x_v) hitObjective3D_wrap(...
-            x_v, x_p, y_p, z_p, vx_p, vy_p, vz_p, obj_weights);
-        
-        
-        
-        
-        
-        
-        %%
-particles = Particle(xv0(4:6,1),'Velocity',n_charges,n_masses,xv0(1:3,1), 0, 1, Nt);
-
-
-
-%particles.accelerationFunction = accelFuncdebug(VV.Ex, VV.Ey, VV.Ez);
-
-VV = Velocity_Verlet([x_grid(1), x_grid(end);y_grid(1),y_grid(end);z_grid(1),z_grid(end)], [Nx, Ny, Nz], 1, particles, hit_objective, E_x, E_y, E_z);
-
-%accelFuncdebug = VV.accelerationFunction();
-%accelFuncdebug = accelerationFunction_debug( x_grid, y_grid, z_grid); 
-
-%VV.ParticleArray(1).accelerationFunction = accelFuncdebug(VV.Ex, VV.Ey, VV.Ez);
-
+VV = Velocity_Verlet([x_grid(1), x_grid(end);y_grid(1),y_grid(end);...
+    z_grid(1),z_grid(end)], [Nx, Ny, Nz], 1, particles, hit_objective,...
+    E_x, E_y, E_z);
 
 VV = VV.calculateF_dF;
 disp('compare xv')
-sum(VV.ParticleArray.xv == xv)
+assert(sum(VV.ParticleArray.xv == xv) == Nt,...
+    'Trajectory calculation failed')
+
 VV.plotdFdEx
-
 figure(50)
-%imagesc((VV.dFdEx(:,:,1)'-dGdEx_meas')./dGdEx_meas')
-imagesc((VV.dFdEx(:,:,1)')./dGdEx_meas')
+imagesc((VV.dFdEx(:,:,1)'-dGdEx_meas')./VV.dFdEx(:,:,1)')
+axis xy image
+colorbar
+title('Relative Errors')
 
-(VV.dFdEx(:,:,1)'-dGdEx_meas')./VV.dFdEx(:,:,1)'
+
+
+
+
+%(VV.dFdEx(:,:,1)'-dGdEx_meas')./VV.dFdEx(:,:,1)'

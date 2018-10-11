@@ -18,6 +18,8 @@ classdef Particle
         
         xv
         xv_dual
+        
+        accelerations
 
     end 
     
@@ -228,31 +230,36 @@ classdef Particle
         
         function obj = runTrajectory(obj)
             
-            assert(~isempty(obj.accelerationFunction),'Cannot run without an acceleration Function')
+            assert(~isempty(obj.accelerationFunction),...
+                'Cannot run without an acceleration Function')
             xs = zeros(obj.Nt, 3);
             vs = zeros(obj.Nt, 3);
-            xs(1,1:3) = obj.xyz_init;% xv0(1:3); % m/s
-            vs(1,1:3) = obj.v_init;   %xv0(4:6); % m/s
+            xs(1,1:3) = obj.xyz_init; % m/s
+            vs(1,1:3) = obj.v_init;   % m/s
 
-            accelerations = zeros(obj.Nt, 3);
+            obj.accelerations = zeros(obj.Nt, 3);
 
-            currentAcceleration = obj.accelerationFunction(obj.t_vec(1), xs(1,1:3));
+            currentAcceleration = obj.accelerationFunction(obj.t_vec(1),...
+                xs(1,1:3));
             assert(isequal(size(currentAcceleration), [3, 1]));
 
-            accelerations(1,1:3) = currentAcceleration;
+            obj.accelerations(1,1:3) = currentAcceleration;
 
             for nn = 1:obj.Nt-1
 
-                xs(nn+1,:) = xs(nn,:) + vs(nn,:)*obj.dt + 0.5*obj.dt*obj.dt*currentAcceleration';
-                nextAcceleration = obj.accelerationFunction(obj.t_vec(nn+1), xs(nn+1,:));
-                vs(nn+1,:) = vs(nn,:) + 0.5*obj.dt*(currentAcceleration + nextAcceleration)';
-                accelerations(nn+1,1:3) = nextAcceleration;
+                xs(nn+1,:) = xs(nn,:) + vs(nn,:)*obj.dt + ...
+                    0.5*obj.dt*obj.dt*currentAcceleration'; % m
+                nextAcceleration = obj.accelerationFunction(...
+                    obj.t_vec(nn+1), xs(nn+1,:)); % m/s^2
+                vs(nn+1,:) = vs(nn,:) + 0.5*obj.dt*(currentAcceleration...
+                    + nextAcceleration)'; % m/s
+                obj.accelerations(nn+1,1:3) = nextAcceleration;
 
-                currentAcceleration = nextAcceleration;
+                currentAcceleration = nextAcceleration; %m?s^2
             end
 
             obj.xv = [xs(:,1); xs(:,2); xs(:,3);
-                vs(:,1); vs(:,2); vs(:,3)];
+                vs(:,1); vs(:,2); vs(:,3)]; %m 
             
          end 
     end

@@ -1,4 +1,4 @@
-classdef cylindricalVelocity_Verlet
+classdef cylindricalVelocity_Verletdebug
     properties
         xyz
         resolution
@@ -39,9 +39,8 @@ classdef cylindricalVelocity_Verlet
     
     methods        
 
-        function obj = cylindricalVelocity_Verlet(xyz, resolution, ParticleArray, Fobj,varargin)
+        function obj = cylindricalVelocity_Verletdebug(xyz, resolution, ParticleArray, Fobj,varargin)
 %% Inputs: Dimensions, Resolutions, Array of Particles, Function Handle Objective Function, E_fields (3) or Potential (1)
-
             assert((isa(xyz,'double') && isequal(size(xyz),[3 ,2])), ...
                 'Grid dimensions must be 3x2 doubles')
             obj.xyz = xyz;
@@ -111,19 +110,14 @@ classdef cylindricalVelocity_Verlet
                 dGdEr_sum = 0*obj.Er;
                 dGdEz_sum = 0*obj.Ez;
                 nParticle = size(obj.ParticleArray,2);
-            
+            tt = tic;
             for ii = 1:length(obj.ParticleArray)
-%                     %elementary_charge   = 1.60217662e-19;
-%                     ion_mass = 5.1477e-26;
-%                     electron_mass       = 1.6605e-27;
-% 
-%                     n_charges = -1;
-%                     n_masses = ion_mass/electron_mass;
-
+                ttt = tic;
                 obj.accelFunc = obj.accelerationFunction();
                 obj.ParticleArray(ii).accelerationFunction = obj.accelFunc(obj.Ex, obj.Er, obj.Ez);
                 obj.ParticleArray(ii) = obj.ParticleArray(ii).runTrajectory();
-                
+                k(ii) = toc(ttt);
+                %tic
                 [iix, iiy, iiz, w000, w001, w010, w011, w100, w101, w110, w111] ...
                     = trilinear_weights(obj,ii);
                     
@@ -158,7 +152,7 @@ classdef cylindricalVelocity_Verlet
                 dGdEx_sum = dGdEx_sum + 1/nParticle*2*dGdEx*G;
                 dGdEr_sum = dGdEr_sum + 1/nParticle*2*dGdEr*G;
                 dGdEz_sum = dGdEz_sum + 1/nParticle*2*dGdEz*G;
-                disp(ii)
+                
             end
             
             obj.Fval = sqrt(1/nParticle*G_sum);
@@ -196,10 +190,13 @@ classdef cylindricalVelocity_Verlet
             obj.dFdEz = obj.reflect_back(dFdEz_full);
            
             obj.dFdV = obj.reflect_back(dFdV_full);
-      
+            disp('forward VV time')
+            sum(k)
+            disp('dual vv time')
+            dual_time = toc(tt) - sum(k);
+            disp(dual_time)
             
         end
-            
             
 
         function accelFunc = accelerationFunction(obj)
@@ -211,13 +208,10 @@ classdef cylindricalVelocity_Verlet
 % input
 %%
 
-       % elementary_charge   = 1.60217662e-19;
-       % electron_mass       = 1.6605e-27;
 
 
         interpolant = @(E, x, y, z) interpn(obj.x_grid, obj.r_grid, obj.z_grid, E, x, y, z, 'linear', 0);
         %interpolant = @(E, x, y, z) interplars(obj.x_grid, obj.r_grid, obj.z_grid, E, x, y, z);
-
 
         accelFunc = @(Ex,Ey,Ez) @(t, xyz) [...
             interpolant(Ex, xyz(1), xyz(2), xyz(3)); ...
@@ -270,6 +264,8 @@ classdef cylindricalVelocity_Verlet
             %             d_z = z_grid(2)-z_grid(1);
             
 
+
+
             if max(x) >= obj.x_grid(end) || min(x) <= obj.x_grid(1)
                 i_x = ones(size(x));
                 i_y = ones(size(y));
@@ -306,7 +302,6 @@ classdef cylindricalVelocity_Verlet
                 i_z = floor( (z - obj.z_grid(1))/obj.dz) +1;
                 log_vec = ones(size(i_x));
             end
-            
 
             % Handle a special case: when x == x_grid(end) we round its position DOWN
             % instead of UP, to allow all boundary values to be defined as one might
@@ -430,7 +425,8 @@ classdef cylindricalVelocity_Verlet
                 obj.z_grid = col(obj.z_grid);
             end
 
-            
+
+               
             if max(x) >= obj.x_grid(end) || min(x) <= obj.x_grid(1)
                 i_x = ones(size(x));
                 i_y = ones(size(y));
@@ -476,6 +472,7 @@ classdef cylindricalVelocity_Verlet
             i_x(log_vec) = floor( (x(log_vec) - obj.x_grid(1))/obj.dx) +1;
             i_y(log_vec) = floor( (y(log_vec) - obj.r_grid(1))/obj.dy) +1;
             i_z(log_vec) = floor( (z(log_vec) - obj.z_grid(1))/obj.dz) +1;
+
 
             % Handle a special case: when x == obj.x_grid(end) we round its position DOWN
             % instead of UP, to allow all boundary values to be defined as one might
@@ -622,11 +619,8 @@ function [partial_x_accelInterpMatrix, i_x, i_y, i_z, w000, w001, w010, w011, w1
                 log_vec = ones(size(i_x));
 
             end
-            
 
-           % i_x(log_vec) = floor( (x(log_vec) - obj.x_grid(1))/obj.dx) +1;
-           % i_y(log_vec) = floor( (y(log_vec) - obj.y_grid(1))/obj.dy) +1;
-           % i_z(log_vec) = floor( (z(log_vec) - obj.z_grid(1))/obj.dz) +1;
+     
 
             % Handle a special case: when x == obj.x_grid(end) we round its position DOWN
             % instead of UP, to allow all boundary values to be defined as one might
@@ -745,9 +739,7 @@ function [partial_x_accelInterpMatrix, i_x, i_y, i_z, w000, w001, w010, w011, w1
 
 
 
-            % TODO: what does "log" mean in "log_vec"? - It was supposed to mean
-            % "Logic" just because it is a binary vector
-            if max(x) >= obj.x_grid(end) || min(x) <= obj.x_grid(1)
+           if max(x) >= obj.x_grid(end) || min(x) <= obj.x_grid(1)
                 i_x = ones(size(x));
                 i_y = ones(size(y));
                 i_z = ones(size(z));
@@ -783,7 +775,7 @@ function [partial_x_accelInterpMatrix, i_x, i_y, i_z, w000, w001, w010, w011, w1
                 i_z = floor( (z - obj.z_grid(1))/obj.dz) +1;
                 log_vec = ones(size(i_x));
             end
-            
+
             % Handle a special case: when x == obj.x_grid(end) we round its position DOWN
             % instead of UP, to allow all boundary values to be defined as one might
             % expect.  Now x == obj.x_grid(1) is in the first cell AND x == obj.x_grid(end)
@@ -991,28 +983,25 @@ function [partial_x_accelInterpMatrix, i_x, i_y, i_z, w000, w001, w010, w011, w1
 
         end
         
-        function plotdFdEx(obj)
-            
-            figure(1010)
-            imagesc(obj.x_grid,obj.y_grid, obj.dFdEx(:,:,1)')
-            axis xy image
-            colorbar
-            xlabel('x [m]')
-            ylabel('y [m]')
-        end
- 
-         
-
-        
-        function dGdV_xr = reflect_back(obj ,dGdV)
+        function dGdV_xr = reflect_back(obj,dGdV)
 
             two_r = size(dGdV,2);
+           %dGdV_xr = zeros(size(dGdV,1),round(two_r/2),size(dGdV,3));
 
             dGdV_xr = dGdV(:,(round(two_r/2):end));
             dGdV_xr(:,2:end) = dGdV_xr(:,2:end) + dGdV(:,(floor(two_r/2):-1:1));
 
         end 
-  
+        
+        function plotdFdEx(obj)
+            
+            figure(1010)
+            imagesc(obj.x_grid,obj.r_grid, obj.dFdEx(:,:,1)')
+            axis xy image
+            colorbar
+            xlabel('x [m]')
+            ylabel('y [m]')
+        end
     end
     
 end

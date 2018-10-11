@@ -10,7 +10,7 @@ classdef Velocity_Verlet
         
         Nparticles
         ParticleArray
-        
+       
         Fobj            %objective function (needs to be a function handle)
         
     end 
@@ -39,7 +39,9 @@ classdef Velocity_Verlet
 
         function obj = Velocity_Verlet(xyz, resolution, Nparticles, ...
                 ParticleArray, Fobj, varargin)
-%% Inputs: Dimensions, Resolutions, Array of Particles, Function Handle Objective Function, E_fields (3) or Potential (1)            
+%% Inputs: 
+% Dimensions, Resolutions, Array of Particles,
+% Function Handle Objective Function, E_fields (3) or Potential (1)            
             assert((isa(xyz,'double') && isequal(size(xyz),[3 ,2])), ...
                 'Grid dimensions must be 3x2 doubles')
             obj.xyz = xyz;
@@ -63,20 +65,25 @@ classdef Velocity_Verlet
             if nargin == 8
                 
                 assert((isa(varargin{1},'double') && ...
-                    isequal(size(varargin{1}),[resolution(1),resolution(2),resolution(3)])), ...
+                    isequal(size(varargin{1}),...
+                    [resolution(1),resolution(2),resolution(3)])), ...
                     'E_x field must be the same size as the resolution')
                 assert((isa(varargin{2},'double') && ...
-                    isequal(size(varargin{2}),[resolution(1),resolution(2),resolution(3)])), ...
+                    isequal(size(varargin{2}),...
+                    [resolution(1),resolution(2),resolution(3)])), ...
                     'E_y field must be the same size as the resolution')
                 assert((isa(varargin{3},'double')&& ...
-                    isequal(size(varargin{3}),[resolution(1),resolution(2),resolution(3)])), ...
+                    isequal(size(varargin{3}),...
+                    [resolution(1),resolution(2),resolution(3)])), ...
                     'E_z field must be the same size as the resolution')
                 
                 obj.Ex = varargin{1};
                 obj.Ey = varargin{2};
                 obj.Ez = varargin{3};
                 
-                obj.V = cumsum(varargin{1},1)*obj.dx + cumsum(varargin{2},2)*obj.dy + cumsum(varargin{3},3)*obj.dz;
+                obj.V = cumsum(varargin{1},1)*obj.dx + ...
+                    cumsum(varargin{2},2)*obj.dy + ...
+                    cumsum(varargin{3},3)*obj.dz;
                 
             elseif nargin == 6
                 assert((isa(varargin{1},'double') && ...
@@ -123,7 +130,7 @@ classdef Velocity_Verlet
                 
                 [G, DG] = obj.Fobj(obj.ParticleArray(1,ii).xv);
                 
-                [systemMatrix, ~, accelMatrix] = ...
+                [systemMatrix, initMatrix, accelMatrix] = ...
                     obj.velocityVerletMatrices3D(ii);
 
 
@@ -185,7 +192,7 @@ classdef Velocity_Verlet
        % electron_mass       = 1.6605e-27;
 
 
-        interpolant = @(E, x, y, z) interpn(obj.x_grid, obj.y_grid, obj.z_grid, E, x, y, z, 'linear', 0);
+        interpolant = @(E, x, y, z) interplars(obj.x_grid, obj.y_grid, obj.z_grid, E, x, y, z);
 
 
         accelFunc = @(Ex,Ey,Ez) @(t, xyz) [...
@@ -239,17 +246,43 @@ classdef Velocity_Verlet
             %             d_z = z_grid(2)-z_grid(1);
             
 
+            if max(x) >= obj.x_grid(end) || min(x) <= obj.x_grid(1)
+                i_x = ones(size(x));
+                i_y = ones(size(y));
+                i_z = ones(size(z));
+                    if max(y) >= obj.y_grid(end) || min(y) <= obj.y_grid(1)
+                            if max(z) >= obj.z_grid(end) || min(z) <= obj.z_grid(1)
+                                  
+                                    log_vec = ((x >= obj.x_grid(1)) & (x <= obj.x_grid(end)) & (y >= obj.y_grid(1)) & (y <= obj.y_grid(end)) & (z >= obj.z_grid(1)) & (z <= obj.z_grid(end)));
+                                    
+                                    i_x(log_vec) = floor( (x(log_vec) - obj.x_grid(1))/obj.dx) +1;
+                                    i_y(log_vec) = floor( (y(log_vec) - obj.y_grid(1))/obj.dy) +1;
+                                    i_z(log_vec) = floor( (z(log_vec) - obj.z_grid(1))/obj.dz) +1;
+                                    
+                            else
+                                    log_vec = ((x >= obj.x_grid(1)) & (x <= obj.x_grid(end)) & (y >= obj.y_grid(1)) & (y <= obj.y_grid(end)));
+                                    
+                                    i_x(log_vec) = floor( (x(log_vec) - obj.x_grid(1))/obj.dx) +1;
+                                    i_y(log_vec) = floor( (y(log_vec) - obj.y_grid(1))/obj.dy) +1;
+                                    i_z(log_vec) = floor( (z(log_vec) - obj.z_grid(1))/obj.dz) +1;
+                            end
+                            
+                    else
+                        log_vec = ((x >= obj.x_grid(1)) & (x <= obj.x_grid(end)));
 
-
-            log_vec = ((x >= obj.x_grid(1)) & (x <= obj.x_grid(end)) & (y >= obj.y_grid(1)) & (y <= obj.y_grid(end)) & (z >= obj.z_grid(1)) & (z <= obj.z_grid(end)));
-
-            i_x = ones(size(x));
-            i_y = ones(size(y));
-            i_z = ones(size(z));
-
-            i_x(log_vec) = floor( (x(log_vec) - obj.x_grid(1))/obj.dx) +1;
-            i_y(log_vec) = floor( (y(log_vec) - obj.y_grid(1))/obj.dy) +1;
-            i_z(log_vec) = floor( (z(log_vec) - obj.z_grid(1))/obj.dz) +1;
+                        i_x(log_vec) = floor( (x(log_vec) - obj.x_grid(1))/obj.dx) +1;
+                        i_y(log_vec) = floor( (y(log_vec) - obj.y_grid(1))/obj.dy) +1;
+                        i_z(log_vec) = floor( (z(log_vec) - obj.z_grid(1))/obj.dz) +1;
+                    end
+                        
+            else
+                
+                i_x = floor( (x - obj.x_grid(1))/obj.dx) +1;
+                i_y = floor( (y - obj.y_grid(1))/obj.dy) +1;
+                i_z = floor( (z - obj.z_grid(1))/obj.dz) +1;
+                log_vec = ones(size(i_x));
+            end
+            
 
             % Handle a special case: when x == x_grid(end) we round its position DOWN
             % instead of UP, to allow all boundary values to be defined as one might
@@ -373,16 +406,52 @@ classdef Velocity_Verlet
                 obj.z_grid = col(obj.z_grid);
             end
 
-
+           % i_x = ones(size(x));
+           % i_y = ones(size(y));
+           % i_z = ones(size(z));
             
+            
+            if max(x) >= obj.x_grid(end) || min(x) <= obj.x_grid(1)
+                i_x = ones(size(x));
+                i_y = ones(size(y));
+                i_z = ones(size(z));
+                
+                    if max(y) >= obj.y_grid(end) || min(y) <= obj.y_grid(1)
+                            if max(z) >= obj.z_grid(end) || min(z) <= obj.z_grid(1)
+                                  
+                                    log_vec = ((x >= obj.x_grid(1)) & (x <= obj.x_grid(end)) & (y >= obj.y_grid(1)) & (y <= obj.y_grid(end)) & (z >= obj.z_grid(1)) & (z <= obj.z_grid(end)));
+                                    
+                                    i_x(log_vec) = floor( (x(log_vec) - obj.x_grid(1))/obj.dx) +1;
+                                    i_y(log_vec) = floor( (y(log_vec) - obj.y_grid(1))/obj.dy) +1;
+                                    i_z(log_vec) = floor( (z(log_vec) - obj.z_grid(1))/obj.dz) +1;
+                                    
+                            else
+                                    log_vec = ((x >= obj.x_grid(1)) & (x <= obj.x_grid(end)) & (y >= obj.y_grid(1)) & (y <= obj.y_grid(end)));
+                                    
+                                    i_x(log_vec) = floor( (x(log_vec) - obj.x_grid(1))/obj.dx) +1;
+                                    i_y(log_vec) = floor( (y(log_vec) - obj.y_grid(1))/obj.dy) +1;
+                                    i_z(log_vec) = floor( (z(log_vec) - obj.z_grid(1))/obj.dz) +1;
+                            end
+                            
+                    else
+                        log_vec = ((x >= obj.x_grid(1)) & (x <= obj.x_grid(end)));
 
-            % TODO: what does "log" mean in "log_vec"? - It was supposed to mean
-            % "Logic" just because it is a binary vector
-            log_vec = ((x >= obj.x_grid(1)) & (x <= obj.x_grid(end)) & (y >= obj.y_grid(1)) & (y <= obj.y_grid(end)) & (z >= obj.z_grid(1)) & (z <= obj.z_grid(end)));
+                        i_x(log_vec) = floor( (x(log_vec) - obj.x_grid(1))/obj.dx) +1;
+                        i_y(log_vec) = floor( (y(log_vec) - obj.y_grid(1))/obj.dy) +1;
+                        i_z(log_vec) = floor( (z(log_vec) - obj.z_grid(1))/obj.dz) +1;
+                    end
+                        
+            else
+                
+                i_x = floor( (x - obj.x_grid(1))/obj.dx) +1;
+                i_y = floor( (y - obj.y_grid(1))/obj.dy) +1;
+                i_z = floor( (z - obj.z_grid(1))/obj.dz) +1;
+                log_vec = ones(size(i_x));
+            end
+            
+            %log_vec = ((x >= obj.x_grid(1)) & (x <= obj.x_grid(end)) & (y >= obj.y_grid(1)) & (y <= obj.y_grid(end)) & (z >= obj.z_grid(1)) & (z <= obj.z_grid(end)));
 
-            i_x = ones(size(x));
-            i_y = ones(size(y));
-            i_z = ones(size(z));
+
 
             i_x(log_vec) = floor( (x(log_vec) - obj.x_grid(1))/obj.dx) +1;
             i_y(log_vec) = floor( (y(log_vec) - obj.y_grid(1))/obj.dy) +1;
@@ -496,15 +565,48 @@ function [partial_x_accelInterpMatrix, i_x, i_y, i_z, w000, w001, w010, w011, w1
 
             % TODO: what does "log" mean in "log_vec"? - It was supposed to mean
             % "Logic" just because it is a binary vector
-            log_vec = ((x >= obj.x_grid(1)) & (x <= obj.x_grid(end)) & (y >= obj.y_grid(1)) & (y <= obj.y_grid(end)) & (z >= obj.z_grid(1)) & (z <= obj.z_grid(end)));
+             if max(x) >= obj.x_grid(end) || min(x) <= obj.x_grid(1)
+                i_x = ones(size(x));
+                i_y = ones(size(y));
+                i_z = ones(size(z));
+                    if max(y) >= obj.y_grid(end) || min(y) <= obj.y_grid(1)
+                            if max(z) >= obj.z_grid(end) || min(z) <= obj.z_grid(1)
+                                  
+                                    log_vec = ((x >= obj.x_grid(1)) & (x <= obj.x_grid(end)) & (y >= obj.y_grid(1)) & (y <= obj.y_grid(end)) & (z >= obj.z_grid(1)) & (z <= obj.z_grid(end)));
+                                    
+                                    i_x(log_vec) = floor( (x(log_vec) - obj.x_grid(1))/obj.dx) +1;
+                                    i_y(log_vec) = floor( (y(log_vec) - obj.y_grid(1))/obj.dy) +1;
+                                    i_z(log_vec) = floor( (z(log_vec) - obj.z_grid(1))/obj.dz) +1;
+                                    
+                            else
+                                    log_vec = ((x >= obj.x_grid(1)) & (x <= obj.x_grid(end)) & (y >= obj.y_grid(1)) & (y <= obj.y_grid(end)));
+                                    
+                                    i_x(log_vec) = floor( (x(log_vec) - obj.x_grid(1))/obj.dx) +1;
+                                    i_y(log_vec) = floor( (y(log_vec) - obj.y_grid(1))/obj.dy) +1;
+                                    i_z(log_vec) = floor( (z(log_vec) - obj.z_grid(1))/obj.dz) +1;
+                            end
+                            
+                    else
+                        log_vec = ((x >= obj.x_grid(1)) & (x <= obj.x_grid(end)));
 
-            i_x = ones(size(x));
-            i_y = ones(size(y));
-            i_z = ones(size(z));
+                        i_x(log_vec) = floor( (x(log_vec) - obj.x_grid(1))/obj.dx) +1;
+                        i_y(log_vec) = floor( (y(log_vec) - obj.y_grid(1))/obj.dy) +1;
+                        i_z(log_vec) = floor( (z(log_vec) - obj.z_grid(1))/obj.dz) +1;
+                    end
+                        
+            else
+                
+                i_x = floor( (x - obj.x_grid(1))/obj.dx) +1;
+                i_y = floor( (y - obj.y_grid(1))/obj.dy) +1;
+                i_z = floor( (z - obj.z_grid(1))/obj.dz) +1;
+                log_vec = ones(size(i_x));
 
-            i_x(log_vec) = floor( (x(log_vec) - obj.x_grid(1))/obj.dx) +1;
-            i_y(log_vec) = floor( (y(log_vec) - obj.y_grid(1))/obj.dy) +1;
-            i_z(log_vec) = floor( (z(log_vec) - obj.z_grid(1))/obj.dz) +1;
+            end
+            
+
+           % i_x(log_vec) = floor( (x(log_vec) - obj.x_grid(1))/obj.dx) +1;
+           % i_y(log_vec) = floor( (y(log_vec) - obj.y_grid(1))/obj.dy) +1;
+           % i_z(log_vec) = floor( (z(log_vec) - obj.z_grid(1))/obj.dz) +1;
 
             % Handle a special case: when x == obj.x_grid(end) we round its position DOWN
             % instead of UP, to allow all boundary values to be defined as one might
@@ -625,16 +727,43 @@ function [partial_x_accelInterpMatrix, i_x, i_y, i_z, w000, w001, w010, w011, w1
 
             % TODO: what does "log" mean in "log_vec"? - It was supposed to mean
             % "Logic" just because it is a binary vector
-            log_vec = ((x >= obj.x_grid(1)) & (x <= obj.x_grid(end)) & (y >= obj.y_grid(1)) & (y <= obj.y_grid(end)) & (z >= obj.z_grid(1)) & (z <= obj.z_grid(end)));
+            if max(x) >= obj.x_grid(end) || min(x) <= obj.x_grid(1)
+                i_x = ones(size(x));
+                i_y = ones(size(y));
+                i_z = ones(size(z));
+                    if max(y) >= obj.y_grid(end) || min(y) <= obj.y_grid(1)
+                            if max(z) >= obj.z_grid(end) || min(z) <= obj.z_grid(1)
+                                  
+                                    log_vec = ((x >= obj.x_grid(1)) & (x <= obj.x_grid(end)) & (y >= obj.y_grid(1)) & (y <= obj.y_grid(end)) & (z >= obj.z_grid(1)) & (z <= obj.z_grid(end)));
+                                    
+                                    i_x(log_vec) = floor( (x(log_vec) - obj.x_grid(1))/obj.dx) +1;
+                                    i_y(log_vec) = floor( (y(log_vec) - obj.y_grid(1))/obj.dy) +1;
+                                    i_z(log_vec) = floor( (z(log_vec) - obj.z_grid(1))/obj.dz) +1;
+                                    
+                            else
+                                    log_vec = ((x >= obj.x_grid(1)) & (x <= obj.x_grid(end)) & (y >= obj.y_grid(1)) & (y <= obj.y_grid(end)));
+                                    
+                                    i_x(log_vec) = floor( (x(log_vec) - obj.x_grid(1))/obj.dx) +1;
+                                    i_y(log_vec) = floor( (y(log_vec) - obj.y_grid(1))/obj.dy) +1;
+                                    i_z(log_vec) = floor( (z(log_vec) - obj.z_grid(1))/obj.dz) +1;
+                            end
+                            
+                    else
+                        log_vec = ((x >= obj.x_grid(1)) & (x <= obj.x_grid(end)));
 
-            i_x = ones(size(x));
-            i_y = ones(size(y));
-            i_z = ones(size(z));
-
-            i_x(log_vec) = floor( (x(log_vec) - obj.x_grid(1))/obj.dx) +1;
-            i_y(log_vec) = floor( (y(log_vec) - obj.y_grid(1))/obj.dy) +1;
-            i_z(log_vec) = floor( (z(log_vec) - obj.z_grid(1))/obj.dz) +1;
-
+                        i_x(log_vec) = floor( (x(log_vec) - obj.x_grid(1))/obj.dx) +1;
+                        i_y(log_vec) = floor( (y(log_vec) - obj.y_grid(1))/obj.dy) +1;
+                        i_z(log_vec) = floor( (z(log_vec) - obj.z_grid(1))/obj.dz) +1;
+                    end
+                        
+            else
+                
+                i_x = floor( (x - obj.x_grid(1))/obj.dx) +1;
+                i_y = floor( (y - obj.y_grid(1))/obj.dy) +1;
+                i_z = floor( (z - obj.z_grid(1))/obj.dz) +1;
+                log_vec = ones(size(i_x));
+            end
+            
             % Handle a special case: when x == obj.x_grid(end) we round its position DOWN
             % instead of UP, to allow all boundary values to be defined as one might
             % expect.  Now x == obj.x_grid(1) is in the first cell AND x == obj.x_grid(end)

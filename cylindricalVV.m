@@ -1,47 +1,33 @@
-classdef cylindricalVelocity_Verlet
-    properties
-        xyz
-        resolution
-        
-        V
-        Ex
+classdef cylindricalVV < abstractVV
+    properties  
         Er
-        Ez
-        
-        Nparticles
-        ParticleArray
-        
-        Fobj            %objective function (needs to be a function handle)
         accelFunc
     end 
     
     properties (SetAccess=private, GetAccess=public, Hidden)
-        x_grid
         y_grid
         r_grid
-        z_grid
         
-        dx
         dy
         dr
-        dz
     end
     
-    properties (SetAccess=private, GetAccess=public)
-        dFdEx
+    properties (Constant, Hidden)
+        field_name       = 'Er'
+        dim_name         = 'r'
+        derivative_name  = 'dFdEr'
+        dist_name        = 'dr'
+        
+    end
+    
+    properties (SetAccess=private, GetAccess=public)       
         dFdEr
-        dFdEz
-        
-        dFdV
-        
-        Fval        
     end
     
     methods        
 
         function obj = cylindricalVelocity_Verlet(xyz, resolution, ParticleArray, Fobj,varargin)
 %% Inputs: Dimensions, Resolutions, Array of Particles, Function Handle Objective Function, E_fields (3) or Potential (1)
-
             assert((isa(xyz,'double') && isequal(size(xyz),[3 ,2])), ...
                 'Grid dimensions must be 3x2 doubles')
             obj.xyz = xyz;
@@ -202,30 +188,6 @@ classdef cylindricalVelocity_Verlet
             
             
 
-        function accelFunc = accelerationFunction(obj)
-%% Creation of the acceleration Function
-% Creates the acceleration function with the given grid as well as the
-% charge (as a multiple of the elementary charge) and the masss (as
-% multiple of the electron mass). The created acceleration function uses
-% the electric field in all three components as well as the position as an
-% input
-%%
-
-       % elementary_charge   = 1.60217662e-19;
-       % electron_mass       = 1.6605e-27;
-
-
-        interpolant = @(E, x, y, z) interpn(obj.x_grid, obj.r_grid, obj.z_grid, E, x, y, z, 'linear', 0);
-        %interpolant = @(E, x, y, z) interplars(obj.x_grid, obj.r_grid, obj.z_grid, E, x, y, z);
-
-
-        accelFunc = @(Ex,Ey,Ez) @(t, xyz) [...
-            interpolant(Ex, xyz(1), xyz(2), xyz(3)); ...
-            interpolant(Ey, xyz(1), xyz(2), xyz(3)); ...
-            interpolant(Ez, xyz(1), xyz(2), xyz(3)); ...
-            ];
-
-        end
         
         function [i_x, i_y, i_z, w000, w100, w010, w110, w001, w101, w011, w111] = trilinear_weights(obj,ii)
 %% trilinear_weights    Indices and weights for trilinear interpolation
@@ -255,12 +217,12 @@ classdef cylindricalVelocity_Verlet
             if isrow(x) && ~isrow(obj.x_grid)
                 row = @(A) reshape(A, 1, []);
                 obj.x_grid = row(obj.x_grid);
-                obj.r_grid = row(obj.r_grid);
+                obj.y_grid = row(obj.y_grid);
                 obj.z_grid = row(obj.z_grid);
             elseif iscolumn(x) && ~iscolumn(obj.x_grid)
                 col = @(A) reshape(A, [], 1);
                 obj.x_grid = col(obj.x_grid);
-                obj.r_grid = col(obj.r_grid);
+                obj.y_grid = col(obj.y_grid);
                 obj.z_grid = col(obj.z_grid);
             end
 
@@ -274,20 +236,20 @@ classdef cylindricalVelocity_Verlet
                 i_x = ones(size(x));
                 i_y = ones(size(y));
                 i_z = ones(size(z));
-                    if max(y) >= obj.r_grid(end) || min(y) <= obj.r_grid(1)
+                    if max(y) >= obj.y_grid(end) || min(y) <= obj.y_grid(1)
                             if max(z) >= obj.z_grid(end) || min(z) <= obj.z_grid(1)
                                   
-                                    log_vec = ((x >= obj.x_grid(1)) & (x <= obj.x_grid(end)) & (y >= obj.r_grid(1)) & (y <= obj.r_grid(end)) & (z >= obj.z_grid(1)) & (z <= obj.z_grid(end)));
+                                    log_vec = ((x >= obj.x_grid(1)) & (x <= obj.x_grid(end)) & (y >= obj.y_grid(1)) & (y <= obj.y_grid(end)) & (z >= obj.z_grid(1)) & (z <= obj.z_grid(end)));
                                     
                                     i_x(log_vec) = floor( (x(log_vec) - obj.x_grid(1))/obj.dx) +1;
-                                    i_y(log_vec) = floor( (y(log_vec) - obj.r_grid(1))/obj.dy) +1;
+                                    i_y(log_vec) = floor( (y(log_vec) - obj.y_grid(1))/obj.dy) +1;
                                     i_z(log_vec) = floor( (z(log_vec) - obj.z_grid(1))/obj.dz) +1;
                                     
                             else
-                                    log_vec = ((x >= obj.x_grid(1)) & (x <= obj.x_grid(end)) & (y >= obj.r_grid(1)) & (y <= obj.r_grid(end)));
+                                    log_vec = ((x >= obj.x_grid(1)) & (x <= obj.x_grid(end)) & (y >= obj.y_grid(1)) & (y <= obj.y_grid(end)));
                                     
                                     i_x(log_vec) = floor( (x(log_vec) - obj.x_grid(1))/obj.dx) +1;
-                                    i_y(log_vec) = floor( (y(log_vec) - obj.r_grid(1))/obj.dy) +1;
+                                    i_y(log_vec) = floor( (y(log_vec) - obj.y_grid(1))/obj.dy) +1;
                                     i_z(log_vec) = floor( (z(log_vec) - obj.z_grid(1))/obj.dz) +1;
                             end
                             
@@ -295,14 +257,14 @@ classdef cylindricalVelocity_Verlet
                         log_vec = ((x >= obj.x_grid(1)) & (x <= obj.x_grid(end)));
 
                         i_x(log_vec) = floor( (x(log_vec) - obj.x_grid(1))/obj.dx) +1;
-                        i_y(log_vec) = floor( (y(log_vec) - obj.r_grid(1))/obj.dy) +1;
+                        i_y(log_vec) = floor( (y(log_vec) - obj.y_grid(1))/obj.dy) +1;
                         i_z(log_vec) = floor( (z(log_vec) - obj.z_grid(1))/obj.dz) +1;
                     end
                         
             else
                 
                 i_x = floor( (x - obj.x_grid(1))/obj.dx) +1;
-                i_y = floor( (y - obj.r_grid(1))/obj.dy) +1;
+                i_y = floor( (y - obj.y_grid(1))/obj.dy) +1;
                 i_z = floor( (z - obj.z_grid(1))/obj.dz) +1;
                 log_vec = ones(size(i_x));
             end
@@ -314,11 +276,11 @@ classdef cylindricalVelocity_Verlet
             % is in the last cell.
 
             i_x(x == obj.x_grid(end)) = length(obj.x_grid)-1;
-            i_y(y == obj.r_grid(end)) = length(obj.r_grid)-1;
+            i_y(y == obj.y_grid(end)) = length(obj.y_grid)-1;
             i_z(z == obj.z_grid(end)) = length(obj.z_grid)-1;
 
             x_c = obj.x_grid(i_x);
-            y_c = obj.r_grid(i_y);
+            y_c = obj.y_grid(i_y);
             z_c = obj.z_grid(i_z);
 
             % Recover weights
@@ -414,42 +376,46 @@ classdef cylindricalVelocity_Verlet
             assert(isvector(y))
             assert(isvector(z))
             assert(isvector(obj.x_grid))
-            assert(isvector(obj.r_grid))
+            assert(isvector(obj.y_grid))
             assert(isvector(obj.z_grid))
             assert(isequal(size(x), size(y), size(z)))
             % Coerce x_grid etc. to be row vectors if x, y, z are row vectors...
             if isrow(x) && ~isrow(obj.x_grid)
                 row = @(A) reshape(A, 1, []);
                 obj.x_grid = row(obj.x_grid);
-                obj.r_grid = row(obj.r_grid);
+                obj.y_grid = row(obj.y_grid);
                 obj.z_grid = row(obj.z_grid);
             elseif iscolumn(x) && ~iscolumn(obj.x_grid)
                 col = @(A) reshape(A, [], 1);
                 obj.x_grid = col(obj.x_grid);
-                obj.r_grid = col(obj.r_grid);
+                obj.y_grid = col(obj.y_grid);
                 obj.z_grid = col(obj.z_grid);
             end
 
+           % i_x = ones(size(x));
+           % i_y = ones(size(y));
+           % i_z = ones(size(z));
+            
             
             if max(x) >= obj.x_grid(end) || min(x) <= obj.x_grid(1)
                 i_x = ones(size(x));
                 i_y = ones(size(y));
                 i_z = ones(size(z));
                 
-                    if max(y) >= obj.r_grid(end) || min(y) <= obj.r_grid(1)
+                    if max(y) >= obj.y_grid(end) || min(y) <= obj.y_grid(1)
                             if max(z) >= obj.z_grid(end) || min(z) <= obj.z_grid(1)
                                   
-                                    log_vec = ((x >= obj.x_grid(1)) & (x <= obj.x_grid(end)) & (y >= obj.r_grid(1)) & (y <= obj.r_grid(end)) & (z >= obj.z_grid(1)) & (z <= obj.z_grid(end)));
+                                    log_vec = ((x >= obj.x_grid(1)) & (x <= obj.x_grid(end)) & (y >= obj.y_grid(1)) & (y <= obj.y_grid(end)) & (z >= obj.z_grid(1)) & (z <= obj.z_grid(end)));
                                     
                                     i_x(log_vec) = floor( (x(log_vec) - obj.x_grid(1))/obj.dx) +1;
-                                    i_y(log_vec) = floor( (y(log_vec) - obj.r_grid(1))/obj.dy) +1;
+                                    i_y(log_vec) = floor( (y(log_vec) - obj.y_grid(1))/obj.dy) +1;
                                     i_z(log_vec) = floor( (z(log_vec) - obj.z_grid(1))/obj.dz) +1;
                                     
                             else
-                                    log_vec = ((x >= obj.x_grid(1)) & (x <= obj.x_grid(end)) & (y >= obj.r_grid(1)) & (y <= obj.r_grid(end)));
+                                    log_vec = ((x >= obj.x_grid(1)) & (x <= obj.x_grid(end)) & (y >= obj.y_grid(1)) & (y <= obj.y_grid(end)));
                                     
                                     i_x(log_vec) = floor( (x(log_vec) - obj.x_grid(1))/obj.dx) +1;
-                                    i_y(log_vec) = floor( (y(log_vec) - obj.r_grid(1))/obj.dy) +1;
+                                    i_y(log_vec) = floor( (y(log_vec) - obj.y_grid(1))/obj.dy) +1;
                                     i_z(log_vec) = floor( (z(log_vec) - obj.z_grid(1))/obj.dz) +1;
                             end
                             
@@ -457,14 +423,14 @@ classdef cylindricalVelocity_Verlet
                         log_vec = ((x >= obj.x_grid(1)) & (x <= obj.x_grid(end)));
 
                         i_x(log_vec) = floor( (x(log_vec) - obj.x_grid(1))/obj.dx) +1;
-                        i_y(log_vec) = floor( (y(log_vec) - obj.r_grid(1))/obj.dy) +1;
+                        i_y(log_vec) = floor( (y(log_vec) - obj.y_grid(1))/obj.dy) +1;
                         i_z(log_vec) = floor( (z(log_vec) - obj.z_grid(1))/obj.dz) +1;
                     end
                         
             else
                 
                 i_x = floor( (x - obj.x_grid(1))/obj.dx) +1;
-                i_y = floor( (y - obj.r_grid(1))/obj.dy) +1;
+                i_y = floor( (y - obj.y_grid(1))/obj.dy) +1;
                 i_z = floor( (z - obj.z_grid(1))/obj.dz) +1;
                 log_vec = ones(size(i_x));
             end
@@ -474,7 +440,7 @@ classdef cylindricalVelocity_Verlet
 
 
             i_x(log_vec) = floor( (x(log_vec) - obj.x_grid(1))/obj.dx) +1;
-            i_y(log_vec) = floor( (y(log_vec) - obj.r_grid(1))/obj.dy) +1;
+            i_y(log_vec) = floor( (y(log_vec) - obj.y_grid(1))/obj.dy) +1;
             i_z(log_vec) = floor( (z(log_vec) - obj.z_grid(1))/obj.dz) +1;
 
             % Handle a special case: when x == obj.x_grid(end) we round its position DOWN
@@ -483,11 +449,11 @@ classdef cylindricalVelocity_Verlet
             % is in the last cell.
 
             i_x(x == obj.x_grid(end)) = length(obj.x_grid)-1;
-            i_y(y == obj.r_grid(end)) = length(obj.r_grid)-1;
+            i_y(y == obj.y_grid(end)) = length(obj.y_grid)-1;
             i_z(z == obj.z_grid(end)) = length(obj.z_grid)-1;
 
             x_c = obj.x_grid(i_x);
-            y_c = obj.r_grid(i_y);
+            y_c = obj.y_grid(i_y);
             z_c = obj.z_grid(i_z);
 
             % Recover weights
@@ -565,7 +531,7 @@ function [partial_x_accelInterpMatrix, i_x, i_y, i_z, w000, w001, w010, w011, w1
             assert(isvector(y))
             assert(isvector(z))
             assert(isvector(obj.x_grid))
-            assert(isvector(obj.r_grid))
+            assert(isvector(obj.y_grid))
             assert(isvector(obj.z_grid))
             assert(isequal(size(x), size(y), size(z)))
 
@@ -573,12 +539,12 @@ function [partial_x_accelInterpMatrix, i_x, i_y, i_z, w000, w001, w010, w011, w1
             if isrow(x) && ~isrow(obj.x_grid)
                 row = @(A) reshape(A, 1, []);
                 obj.x_grid = row(obj.x_grid);
-                obj.r_grid = row(obj.r_grid);
+                obj.y_grid = row(obj.y_grid);
                 obj.z_grid = row(obj.z_grid);
             elseif iscolumn(x) && ~iscolumn(obj.x_grid)
                 col = @(A) reshape(A, [], 1);
                 obj.x_grid = col(obj.x_grid);
-                obj.r_grid = col(obj.r_grid);
+                obj.y_grid = col(obj.y_grid);
                 obj.z_grid = col(obj.z_grid);
             end
 
@@ -589,20 +555,20 @@ function [partial_x_accelInterpMatrix, i_x, i_y, i_z, w000, w001, w010, w011, w1
                 i_x = ones(size(x));
                 i_y = ones(size(y));
                 i_z = ones(size(z));
-                    if max(y) >= obj.r_grid(end) || min(y) <= obj.r_grid(1)
+                    if max(y) >= obj.y_grid(end) || min(y) <= obj.y_grid(1)
                             if max(z) >= obj.z_grid(end) || min(z) <= obj.z_grid(1)
                                   
-                                    log_vec = ((x >= obj.x_grid(1)) & (x <= obj.x_grid(end)) & (y >= obj.r_grid(1)) & (y <= obj.r_grid(end)) & (z >= obj.z_grid(1)) & (z <= obj.z_grid(end)));
+                                    log_vec = ((x >= obj.x_grid(1)) & (x <= obj.x_grid(end)) & (y >= obj.y_grid(1)) & (y <= obj.y_grid(end)) & (z >= obj.z_grid(1)) & (z <= obj.z_grid(end)));
                                     
                                     i_x(log_vec) = floor( (x(log_vec) - obj.x_grid(1))/obj.dx) +1;
-                                    i_y(log_vec) = floor( (y(log_vec) - obj.r_grid(1))/obj.dy) +1;
+                                    i_y(log_vec) = floor( (y(log_vec) - obj.y_grid(1))/obj.dy) +1;
                                     i_z(log_vec) = floor( (z(log_vec) - obj.z_grid(1))/obj.dz) +1;
                                     
                             else
-                                    log_vec = ((x >= obj.x_grid(1)) & (x <= obj.x_grid(end)) & (y >= obj.r_grid(1)) & (y <= obj.r_grid(end)));
+                                    log_vec = ((x >= obj.x_grid(1)) & (x <= obj.x_grid(end)) & (y >= obj.y_grid(1)) & (y <= obj.y_grid(end)));
                                     
                                     i_x(log_vec) = floor( (x(log_vec) - obj.x_grid(1))/obj.dx) +1;
-                                    i_y(log_vec) = floor( (y(log_vec) - obj.r_grid(1))/obj.dy) +1;
+                                    i_y(log_vec) = floor( (y(log_vec) - obj.y_grid(1))/obj.dy) +1;
                                     i_z(log_vec) = floor( (z(log_vec) - obj.z_grid(1))/obj.dz) +1;
                             end
                             
@@ -610,14 +576,14 @@ function [partial_x_accelInterpMatrix, i_x, i_y, i_z, w000, w001, w010, w011, w1
                         log_vec = ((x >= obj.x_grid(1)) & (x <= obj.x_grid(end)));
 
                         i_x(log_vec) = floor( (x(log_vec) - obj.x_grid(1))/obj.dx) +1;
-                        i_y(log_vec) = floor( (y(log_vec) - obj.r_grid(1))/obj.dy) +1;
+                        i_y(log_vec) = floor( (y(log_vec) - obj.y_grid(1))/obj.dy) +1;
                         i_z(log_vec) = floor( (z(log_vec) - obj.z_grid(1))/obj.dz) +1;
                     end
                         
             else
                 
                 i_x = floor( (x - obj.x_grid(1))/obj.dx) +1;
-                i_y = floor( (y - obj.r_grid(1))/obj.dy) +1;
+                i_y = floor( (y - obj.y_grid(1))/obj.dy) +1;
                 i_z = floor( (z - obj.z_grid(1))/obj.dz) +1;
                 log_vec = ones(size(i_x));
 
@@ -634,11 +600,11 @@ function [partial_x_accelInterpMatrix, i_x, i_y, i_z, w000, w001, w010, w011, w1
             % is in the last cell.
 
             i_x(x == obj.x_grid(end)) = length(obj.x_grid)-1;
-            i_y(y == obj.r_grid(end)) = length(obj.r_grid)-1;
+            i_y(y == obj.y_grid(end)) = length(obj.y_grid)-1;
             i_z(z == obj.z_grid(end)) = length(obj.z_grid)-1;
 
             x_c = obj.x_grid(i_x);
-            y_c = obj.r_grid(i_y);
+            y_c = obj.y_grid(i_y);
             z_c = obj.z_grid(i_z);
 
             % Recover weights
@@ -726,7 +692,7 @@ function [partial_x_accelInterpMatrix, i_x, i_y, i_z, w000, w001, w010, w011, w1
             assert(isvector(y))
             assert(isvector(z))
             assert(isvector(obj.x_grid))
-            assert(isvector(obj.r_grid))
+            assert(isvector(obj.y_grid))
             assert(isvector(obj.z_grid))
             assert(isequal(size(x), size(y), size(z)))
 
@@ -734,12 +700,12 @@ function [partial_x_accelInterpMatrix, i_x, i_y, i_z, w000, w001, w010, w011, w1
             if isrow(x) && ~isrow(obj.x_grid)
                 row = @(A) reshape(A, 1, []);
                 obj.x_grid = row(obj.x_grid);
-                obj.r_grid = row(obj.r_grid);
+                obj.y_grid = row(obj.y_grid);
                 obj.z_grid = row(obj.z_grid);
             elseif iscolumn(x) && ~iscolumn(obj.x_grid)
                 col = @(A) reshape(A, [], 1);
                 obj.x_grid = col(obj.x_grid);
-                obj.r_grid = col(obj.r_grid);
+                obj.y_grid = col(obj.y_grid);
                 obj.z_grid = col(obj.z_grid);
             end
 
@@ -751,20 +717,20 @@ function [partial_x_accelInterpMatrix, i_x, i_y, i_z, w000, w001, w010, w011, w1
                 i_x = ones(size(x));
                 i_y = ones(size(y));
                 i_z = ones(size(z));
-                    if max(y) >= obj.r_grid(end) || min(y) <= obj.r_grid(1)
+                    if max(y) >= obj.y_grid(end) || min(y) <= obj.y_grid(1)
                             if max(z) >= obj.z_grid(end) || min(z) <= obj.z_grid(1)
                                   
-                                    log_vec = ((x >= obj.x_grid(1)) & (x <= obj.x_grid(end)) & (y >= obj.r_grid(1)) & (y <= obj.r_grid(end)) & (z >= obj.z_grid(1)) & (z <= obj.z_grid(end)));
+                                    log_vec = ((x >= obj.x_grid(1)) & (x <= obj.x_grid(end)) & (y >= obj.y_grid(1)) & (y <= obj.y_grid(end)) & (z >= obj.z_grid(1)) & (z <= obj.z_grid(end)));
                                     
                                     i_x(log_vec) = floor( (x(log_vec) - obj.x_grid(1))/obj.dx) +1;
-                                    i_y(log_vec) = floor( (y(log_vec) - obj.r_grid(1))/obj.dy) +1;
+                                    i_y(log_vec) = floor( (y(log_vec) - obj.y_grid(1))/obj.dy) +1;
                                     i_z(log_vec) = floor( (z(log_vec) - obj.z_grid(1))/obj.dz) +1;
                                     
                             else
-                                    log_vec = ((x >= obj.x_grid(1)) & (x <= obj.x_grid(end)) & (y >= obj.r_grid(1)) & (y <= obj.r_grid(end)));
+                                    log_vec = ((x >= obj.x_grid(1)) & (x <= obj.x_grid(end)) & (y >= obj.y_grid(1)) & (y <= obj.y_grid(end)));
                                     
                                     i_x(log_vec) = floor( (x(log_vec) - obj.x_grid(1))/obj.dx) +1;
-                                    i_y(log_vec) = floor( (y(log_vec) - obj.r_grid(1))/obj.dy) +1;
+                                    i_y(log_vec) = floor( (y(log_vec) - obj.y_grid(1))/obj.dy) +1;
                                     i_z(log_vec) = floor( (z(log_vec) - obj.z_grid(1))/obj.dz) +1;
                             end
                             
@@ -772,14 +738,14 @@ function [partial_x_accelInterpMatrix, i_x, i_y, i_z, w000, w001, w010, w011, w1
                         log_vec = ((x >= obj.x_grid(1)) & (x <= obj.x_grid(end)));
 
                         i_x(log_vec) = floor( (x(log_vec) - obj.x_grid(1))/obj.dx) +1;
-                        i_y(log_vec) = floor( (y(log_vec) - obj.r_grid(1))/obj.dy) +1;
+                        i_y(log_vec) = floor( (y(log_vec) - obj.y_grid(1))/obj.dy) +1;
                         i_z(log_vec) = floor( (z(log_vec) - obj.z_grid(1))/obj.dz) +1;
                     end
                         
             else
                 
                 i_x = floor( (x - obj.x_grid(1))/obj.dx) +1;
-                i_y = floor( (y - obj.r_grid(1))/obj.dy) +1;
+                i_y = floor( (y - obj.y_grid(1))/obj.dy) +1;
                 i_z = floor( (z - obj.z_grid(1))/obj.dz) +1;
                 log_vec = ones(size(i_x));
             end
@@ -790,11 +756,11 @@ function [partial_x_accelInterpMatrix, i_x, i_y, i_z, w000, w001, w010, w011, w1
             % is in the last cell.
 
             i_x(x == obj.x_grid(end)) = length(obj.x_grid)-1;
-            i_y(y == obj.r_grid(end)) = length(obj.r_grid)-1;
+            i_y(y == obj.y_grid(end)) = length(obj.y_grid)-1;
             i_z(z == obj.z_grid(end)) = length(obj.z_grid)-1;
 
             x_c = obj.x_grid(i_x);
-            y_c = obj.r_grid(i_y);
+            y_c = obj.y_grid(i_y);
             z_c = obj.z_grid(i_z);
 
             % Recover weights
