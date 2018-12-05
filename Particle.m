@@ -261,7 +261,10 @@ classdef Particle
             obj.xv = [xs(:,1); xs(:,2); xs(:,3);
                 vs(:,1); vs(:,2); vs(:,3)]; %m 
             
-         end 
+        end 
+         
+        
+        
     end
     
 end 
